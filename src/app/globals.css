@@ -1,34 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Fredoka+One&family=Jua&display=swap');
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --primary-bg: #82E0AA; /* Bright kid-friendly green for a grassy feel */
+  --sky-bg: #5DADE2; /* Cartoon sky blue */
+  --card-bg: #FFFFFF;
+  --card-border: #34495E;
+  
+  --btn-orange: #FF9F43;
+  --btn-orange-shadow: #E67E22;
+  
+  --btn-blue: #3498DB;
+  --btn-blue-shadow: #2980B9;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --text-dark: #2C3E50;
+  --text-light: #ECF0F1;
 }
 
 * {
@@ -37,13 +22,226 @@ body {
   margin: 0;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+body {
+  font-family: 'Baloo 2', 'Jua', cursive, sans-serif;
+  background-color: var(--sky-bg);
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 15%),
+    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 20%);
+  color: var(--text-dark);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* Background Grassy Hill */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 35vh;
+  background-color: var(--primary-bg);
+  border-top: 15px solid #2ECC71;
+  border-radius: 50% 50% 0 0 / 20px 20px 0 0;
+  z-index: -1;
+  box-shadow: inset 0 20px 0 rgba(255,255,255,0.2);
+}
+
+main {
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  max-width: 1200px;
+  position: relative;
+  z-index: 10;
+}
+
+/* Header */
+header {
+  text-align: center;
+  margin-bottom: 4rem;
+  animation: bounceInDown 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+header h1 {
+  font-family: 'Fredoka One', 'Jua', cursive;
+  font-size: 5rem;
+  color: #F1C40F;
+  text-shadow: 
+    -4px -4px 0 #E67E22,
+     4px -4px 0 #E67E22,
+    -4px  4px 0 #E67E22,
+     4px  4px 0 #E67E22,
+     0px  8px 0 #D35400; /* Chunky 3D shadow effect */
+  margin-bottom: 0.5rem;
+  letter-spacing: 2px;
+  line-height: 1.1;
+}
+
+header p {
+  font-size: 1.8rem;
+  color: #FFF;
+  font-weight: 700;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+}
+
+/* Game Grid */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 3rem;
+  padding-bottom: 5rem;
+}
+
+/* Game Card */
+.game-card {
+  background: var(--card-bg);
+  border: 6px solid var(--card-border);
+  border-radius: 40px;
+  padding: 2rem;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 15px 0 var(--card-border);
+  position: relative;
+  top: 0;
+  animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
+}
+
+.game-card:nth-child(1) { animation-delay: 0.1s; }
+.game-card:nth-child(2) { animation-delay: 0.2s; }
+.game-card:nth-child(3) { animation-delay: 0.3s; }
+.game-card:nth-child(4) { animation-delay: 0.4s; }
+
+.game-card:hover {
+  transform: translateY(-5px) scale(1.03) rotate(-2deg);
+}
+
+.game-card:active {
+  top: 10px;
+  box-shadow: 0 5px 0 var(--card-border);
+  transform: scale(0.98);
+}
+
+.icon-wrapper {
+  width: 130px;
+  height: 130px;
+  background: #FFEAA7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  border: 6px solid var(--text-dark);
+  box-shadow: inset 0 -10px 0 rgba(0,0,0,0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Shine effect on circle */
+.icon-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 30px;
+  height: 20px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 50%;
+  transform: rotate(-45deg);
+}
+
+.icon-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.game-card:hover .icon-wrapper img {
+  transform: scale(1.15) rotate(5deg);
+}
+
+.fallback-icon {
+  font-family: 'Fredoka One', 'Jua', cursive;
+  font-size: 4.5rem;
+  color: var(--btn-orange);
+  text-shadow: 3px 3px 0 var(--text-dark);
+}
+
+.game-card h2 {
+  font-family: 'Fredoka One', 'Jua', cursive;
+  font-size: 2rem;
+  color: var(--text-dark);
+  margin: 0;
+  text-align: center;
+}
+
+/* Animations */
+@keyframes bounceInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-200px);
   }
+  60% {
+    opacity: 1;
+    transform: translateY(30px);
+  }
+  80% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem;
+  background: var(--card-bg);
+  border-radius: 40px;
+  border: 6px dashed var(--card-border);
+  box-shadow: 0 10px 0 var(--card-border);
+  animation: popIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+.empty-state .icon {
+  font-size: 6rem;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.empty-state h3 {
+  font-family: 'Fredoka One', 'Jua', cursive;
+  font-size: 2.5rem;
+  color: var(--btn-orange);
+  text-shadow: 2px 2px 0 var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #7F8C8D;
 }

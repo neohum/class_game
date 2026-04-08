@@ -44,6 +44,262 @@ const MAX_NOTE = 74; // D5 (높은 레, 여자 고음역대)
 // === Global Settings ===
 window.micSensitivity = 5.0; // 최상단(최대치) 고정
 
+// === Classes ===
+class MountainObstacle {
+    constructor(canvasWidth, canvasHeight) {
+        this.type = 'mountain';
+        this.x = canvasWidth;
+        this.mountainWidth = Math.random() * 200 + 150;
+        
+        const minH = canvasHeight * 0.1; // 최소 높이 10%
+        const maxH = canvasHeight * 0.75; // 최대 높이 75%
+        
+        // 이전 산과 차이를 눈에 띄게 주기 위해 높이를 더 크게 무작위화
+        const randomFactor = Math.random();
+        if (randomFactor < 0.3) {
+            this.bottomMountainHeight = minH + Math.random() * (canvasHeight * 0.15); // 낮은 산
+        } else if (randomFactor < 0.7) {
+            this.bottomMountainHeight = canvasHeight * 0.35 + Math.random() * (canvasHeight * 0.15); // 중간 산
+        } else {
+            this.bottomMountainHeight = maxH - Math.random() * (canvasHeight * 0.15); // 높은 산
+        }
+        
+        this.topMountainHeight = 0; 
+        
+        this.passed = false;
+        this.width = this.mountainWidth; // For generic scoring logic
+    }
+
+    update(speed) {
+        this.x -= speed;
+    }
+
+    checkCollision(planeCenterX, planeTopY, planeBottomY, planeLeftX, planeRightX, canvasHeight) {
+        if (planeCenterX > this.x && planeCenterX < this.x + this.mountainWidth) {
+            let bottomCurrentHeight = 0;
+            
+            if (planeCenterX < this.x + this.mountainWidth / 2) {
+                let ratio = (planeCenterX - this.x) / (this.mountainWidth / 2);
+                bottomCurrentHeight = this.bottomMountainHeight * ratio;
+            } else {
+                let ratio = (this.x + this.mountainWidth - planeCenterX) / (this.mountainWidth / 2);
+                bottomCurrentHeight = this.bottomMountainHeight * ratio;
+            }
+            
+            if (planeBottomY > canvasHeight - bottomCurrentHeight) {
+                return true; 
+            }
+        }
+        return false;
+    }
+
+    draw(ctx, canvasHeight) {
+        let snowRatio = 0.3; 
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#00f2fe';
+
+        const gradientBottom = ctx.createLinearGradient(0, canvasHeight - this.bottomMountainHeight, 0, canvasHeight);
+        gradientBottom.addColorStop(0, '#475569');
+        gradientBottom.addColorStop(1, '#0f172a');
+
+        ctx.fillStyle = gradientBottom;
+        ctx.beginPath();
+        ctx.moveTo(this.x, canvasHeight);
+        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
+        ctx.lineTo(this.x + this.mountainWidth, canvasHeight);
+        ctx.fill();
+        
+        ctx.beginPath();
+        let snowHeightB = this.bottomMountainHeight * snowRatio;
+        let leftXB = this.x + (this.mountainWidth / 2) * (1 - snowRatio);
+        let rightXB = this.x + this.mountainWidth / 2 + (this.mountainWidth / 2) * snowRatio;
+        
+        ctx.moveTo(leftXB, canvasHeight - this.bottomMountainHeight + snowHeightB);
+        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
+        ctx.lineTo(rightXB, canvasHeight - this.bottomMountainHeight + snowHeightB);
+        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight + snowHeightB + 10);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(this.x, canvasHeight);
+        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
+        ctx.lineTo(this.x + this.mountainWidth, canvasHeight);
+        ctx.stroke();
+    }
+}
+
+class CaveObstacle {
+    constructor(canvasWidth, canvasHeight) {
+        this.type = 'cave';
+        this.x = canvasWidth;
+        this.mountainWidth = Math.random() * 200 + 150;
+        
+        const minHeight = 50;
+        const gap = Math.random() * 150 + 200; 
+        const maxAvailableHeight = canvasHeight - gap;
+        
+        if (maxAvailableHeight > minHeight * 2) {
+            this.topMountainHeight = Math.random() * (maxAvailableHeight - minHeight * 2) + minHeight;
+            this.bottomMountainHeight = maxAvailableHeight - this.topMountainHeight;
+        } else {
+            this.topMountainHeight = minHeight;
+            this.bottomMountainHeight = minHeight;
+        }
+        
+        this.passed = false;
+        this.width = this.mountainWidth; // For generic scoring logic
+    }
+
+    update(speed) {
+        this.x -= speed;
+    }
+
+    checkCollision(planeCenterX, planeTopY, planeBottomY, planeLeftX, planeRightX, canvasHeight) {
+        if (planeCenterX > this.x && planeCenterX < this.x + this.mountainWidth) {
+            let bottomCurrentHeight = 0;
+            let topCurrentHeight = 0;
+            
+            if (planeCenterX < this.x + this.mountainWidth / 2) {
+                let ratio = (planeCenterX - this.x) / (this.mountainWidth / 2);
+                bottomCurrentHeight = this.bottomMountainHeight * ratio;
+                topCurrentHeight = this.topMountainHeight * ratio;
+            } else {
+                let ratio = (this.x + this.mountainWidth - planeCenterX) / (this.mountainWidth / 2);
+                bottomCurrentHeight = this.bottomMountainHeight * ratio;
+                topCurrentHeight = this.topMountainHeight * ratio;
+            }
+            
+            if (planeBottomY > canvasHeight - bottomCurrentHeight) {
+                return true; 
+            }
+            if (topCurrentHeight > 0 && planeTopY < topCurrentHeight) {
+                return true; 
+            }
+        }
+        return false;
+    }
+
+    draw(ctx, canvasHeight) {
+        let snowRatio = 0.3; 
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#00f2fe';
+
+        // Bottom Mountain
+        const gradientBottom = ctx.createLinearGradient(0, canvasHeight - this.bottomMountainHeight, 0, canvasHeight);
+        gradientBottom.addColorStop(0, '#475569');
+        gradientBottom.addColorStop(1, '#0f172a');
+
+        ctx.fillStyle = gradientBottom;
+        ctx.beginPath();
+        ctx.moveTo(this.x, canvasHeight);
+        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
+        ctx.lineTo(this.x + this.mountainWidth, canvasHeight);
+        ctx.fill();
+        
+        ctx.beginPath();
+        let snowHeightB = this.bottomMountainHeight * snowRatio;
+        let leftXB = this.x + (this.mountainWidth / 2) * (1 - snowRatio);
+        let rightXB = this.x + this.mountainWidth / 2 + (this.mountainWidth / 2) * snowRatio;
+        
+        ctx.moveTo(leftXB, canvasHeight - this.bottomMountainHeight + snowHeightB);
+        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
+        ctx.lineTo(rightXB, canvasHeight - this.bottomMountainHeight + snowHeightB);
+        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight + snowHeightB + 10);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(this.x, canvasHeight);
+        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
+        ctx.lineTo(this.x + this.mountainWidth, canvasHeight);
+        ctx.stroke();
+
+        // Top Mountain
+        if (this.topMountainHeight > 0) {
+            const gradientTop = ctx.createLinearGradient(0, 0, 0, this.topMountainHeight);
+            gradientTop.addColorStop(0, '#0f172a');
+            gradientTop.addColorStop(1, '#475569');
+
+            ctx.fillStyle = gradientTop;
+            ctx.beginPath();
+            ctx.moveTo(this.x, 0);
+            ctx.lineTo(this.x + this.mountainWidth / 2, this.topMountainHeight);
+            ctx.lineTo(this.x + this.mountainWidth, 0);
+            ctx.fill();
+            
+            ctx.beginPath();
+            let snowHeightT = this.topMountainHeight * snowRatio;
+            let leftXT = this.x + (this.mountainWidth / 2) * (1 - snowRatio);
+            let rightXT = this.x + this.mountainWidth / 2 + (this.mountainWidth / 2) * snowRatio;
+            
+            ctx.moveTo(leftXT, this.topMountainHeight - snowHeightT);
+            ctx.lineTo(this.x + this.mountainWidth / 2, this.topMountainHeight);
+            ctx.lineTo(rightXT, this.topMountainHeight - snowHeightT);
+            ctx.lineTo(this.x + this.mountainWidth / 2, this.topMountainHeight - snowHeightT - 10);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(this.x, 0);
+            ctx.lineTo(this.x + this.mountainWidth / 2, this.topMountainHeight);
+            ctx.lineTo(this.x + this.mountainWidth, 0);
+            ctx.stroke();
+        }
+    }
+}
+
+class SkyObstacle {
+    constructor(canvasWidth, canvasHeight) {
+        this.type = 'cloud';
+        this.width = Math.random() * 80 + 120;
+        this.height = Math.random() * 60 + 60;
+        this.x = canvasWidth;
+        this.y = Math.random() * (canvasHeight - this.height - 40) + 20;
+        this.passed = false;
+    }
+
+    update(speed) {
+        this.x -= speed;
+    }
+
+    checkCollision(planeCenterX, planeTopY, planeBottomY, planeLeftX, planeRightX) {
+        let cLeft = this.x + 10;
+        let cRight = this.x + this.width - 10;
+        let cTop = this.y + 10;
+        let cBottom = this.y + this.height - 10;
+
+        if (planeRightX > cLeft && planeLeftX < cRight &&
+            planeBottomY > cTop && planeTopY < cBottom) {
+            return true;
+        }
+        return false;
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = 'rgba(71, 85, 105, 0.85)';
+        ctx.beginPath();
+        ctx.arc(this.x + this.width * 0.3, this.y + this.height * 0.5, this.height * 0.4, 0, Math.PI * 2);
+        ctx.arc(this.x + this.width * 0.7, this.y + this.height * 0.5, this.height * 0.4, 0, Math.PI * 2);
+        ctx.arc(this.x + this.width * 0.5, this.y + this.height * 0.3, this.height * 0.5, 0, Math.PI * 2);
+        ctx.arc(this.x + this.width * 0.5, this.y + this.height * 0.7, this.height * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (Math.random() < 0.1) {
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, this.y + this.height * 0.8);
+            ctx.lineTo(this.x + this.width / 2 - 10, this.y + this.height * 0.8 + 15);
+            ctx.lineTo(this.x + this.width / 2 + 5, this.y + this.height * 0.8 + 15);
+            ctx.lineTo(this.x + this.width / 2 - 5, this.y + this.height * 0.8 + 35);
+            ctx.stroke();
+        }
+    }
+}
+
 // === Game State ===
 let gameState = 'START'; // 'START', 'PRACTICE', 'CAVE', 'GAMEOVER'
 let lastMode = 'PRACTICE';
@@ -86,52 +342,13 @@ function resetGame() {
 
 function spawnObstacle() {
     if (gameState === 'SKY') {
-        const cloudHeight = Math.random() * 60 + 60; // 60 ~ 120
-        const cloudWidth = Math.random() * 80 + 120; // 120 ~ 200
-        const yPos = Math.random() * (canvas.height - cloudHeight - 40) + 20; // 상하 여백
-        
-        obstacles.push({
-            type: 'cloud',
-            x: canvas.width,
-            y: yPos,
-            width: cloudWidth,
-            height: cloudHeight,
-            passed: false
-        });
-        return;
-    }
-
-    const minHeight = 50;
-    let topMountainHeight = 0;
-    let bottomMountainHeight = 0;
-
-    if (gameState === 'CAVE') {
-        const gap = Math.random() * 150 + 200; // 200 ~ 350
-        const maxAvailableHeight = canvas.height - gap;
-        if (maxAvailableHeight > minHeight * 2) {
-            topMountainHeight = Math.random() * (maxAvailableHeight - minHeight * 2) + minHeight;
-            bottomMountainHeight = maxAvailableHeight - topMountainHeight;
-        } else {
-            topMountainHeight = minHeight;
-            bottomMountainHeight = minHeight;
-        }
+        obstacles.push(new SkyObstacle(canvas.width, canvas.height));
+    } else if (gameState === 'CAVE') {
+        obstacles.push(new CaveObstacle(canvas.width, canvas.height));
     } else {
         // MOUNTAIN 로직
-        const minH = 100;
-        const maxH = canvas.height - 100; // 공간 보장
-        bottomMountainHeight = Math.random() * (maxH - minH) + minH;
+        obstacles.push(new MountainObstacle(canvas.width, canvas.height));
     }
-
-    const mWidth = Math.random() * 200 + 150; // 150 ~ 350 랜덤 폭
-
-    obstacles.push({
-        type: 'mountain',
-        x: canvas.width,
-        mountainWidth: mWidth,
-        topMountainHeight: topMountainHeight,
-        bottomMountainHeight: bottomMountainHeight,
-        passed: false
-    });
 }
 
 function createParticles(x, y, count = 15) {
@@ -227,58 +444,22 @@ function update() {
 
         for (let i = obstacles.length - 1; i >= 0; i--) {
             let obs = obstacles[i];
-            obs.x -= currentSpeed;
+            obs.update(currentSpeed);
 
-            let hitObstacle = false;
             let planeCenterX = airplane.x + airplane.width / 2;
             let planeBottomY = airplane.y + airplane.height - 5; // margin 5
             let planeTopY = airplane.y + 5; // margin 5
             let planeLeftX = airplane.x + 5;
             let planeRightX = airplane.x + airplane.width - 5;
 
-            if (obs.type === 'cloud') {
-                // 구름 충돌 (AABB 감지)
-                let cLeft = obs.x + 10;
-                let cRight = obs.x + obs.width - 10;
-                let cTop = obs.y + 10;
-                let cBottom = obs.y + obs.height - 10;
-
-                if (planeRightX > cLeft && planeLeftX < cRight &&
-                    planeBottomY > cTop && planeTopY < cBottom) {
-                    hitObstacle = true;
-                }
-            } else {
-                // 정밀한 산(삼각형) 충돌 감지
-                if (planeCenterX > obs.x && planeCenterX < obs.x + obs.mountainWidth) {
-                    let bottomCurrentHeight = 0;
-                    let topCurrentHeight = 0;
-                    
-                    if (planeCenterX < obs.x + obs.mountainWidth / 2) {
-                        let ratio = (planeCenterX - obs.x) / (obs.mountainWidth / 2);
-                        bottomCurrentHeight = obs.bottomMountainHeight * ratio;
-                        topCurrentHeight = obs.topMountainHeight * ratio;
-                    } else {
-                        let ratio = (obs.x + obs.mountainWidth - planeCenterX) / (obs.mountainWidth / 2);
-                        bottomCurrentHeight = obs.bottomMountainHeight * ratio;
-                        topCurrentHeight = obs.topMountainHeight * ratio;
-                    }
-                    
-                    if (planeBottomY > canvas.height - bottomCurrentHeight) {
-                        hitObstacle = true; // 바닥 산 충돌
-                    }
-                    if (topCurrentHeight > 0 && planeTopY < topCurrentHeight) {
-                        hitObstacle = true; // 천장 산 충돌
-                    }
-                }
-            }
+            let hitObstacle = obs.checkCollision(planeCenterX, planeTopY, planeBottomY, planeLeftX, planeRightX, canvas.height);
 
             if (hitObstacle) {
                 gameOver();
             }
 
             // 점수 증가 로직
-            let obsWidth = obs.type === 'cloud' ? obs.width : obs.mountainWidth;
-            if (obs.x + obsWidth < airplane.x && !obs.passed) {
+            if (obs.x + obs.width < airplane.x && !obs.passed) {
                 score++;
                 scoreEl.innerText = score;
                 obs.passed = true;
@@ -287,7 +468,7 @@ function update() {
             }
 
             // 화면을 벗어나면 삭제
-            if (obs.x + obsWidth < 0) {
+            if (obs.x + obs.width < 0) {
                 obstacles.splice(i, 1);
             }
         }
@@ -408,98 +589,8 @@ function drawAirplane() {
 
 function drawObstacles() {
     for (let obs of obstacles) {
-        if (obs.type === 'cloud') {
-            ctx.fillStyle = 'rgba(71, 85, 105, 0.85)'; // 먹구름 색상
-            ctx.beginPath();
-            // 원 4개로 구름 모양 형상화
-            ctx.arc(obs.x + obs.width * 0.3, obs.y + obs.height * 0.5, obs.height * 0.4, 0, Math.PI * 2);
-            ctx.arc(obs.x + obs.width * 0.7, obs.y + obs.height * 0.5, obs.height * 0.4, 0, Math.PI * 2);
-            ctx.arc(obs.x + obs.width * 0.5, obs.y + obs.height * 0.3, obs.height * 0.5, 0, Math.PI * 2);
-            ctx.arc(obs.x + obs.width * 0.5, obs.y + obs.height * 0.7, obs.height * 0.3, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // 번개 이펙트 (10% 확률로 반짝)
-            if (Math.random() < 0.1) {
-                ctx.strokeStyle = '#facc15';
-                ctx.lineWidth = 3;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.beginPath();
-                ctx.moveTo(obs.x + obs.width / 2, obs.y + obs.height * 0.8);
-                ctx.lineTo(obs.x + obs.width / 2 - 10, obs.y + obs.height * 0.8 + 15);
-                ctx.lineTo(obs.x + obs.width / 2 + 5, obs.y + obs.height * 0.8 + 15);
-                ctx.lineTo(obs.x + obs.width / 2 - 5, obs.y + obs.height * 0.8 + 35);
-                ctx.stroke();
-            }
-            continue;
-        }
-
-        let snowRatio = 0.3; // 산 상/하단 30% 눈 덮임
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#00f2fe';
-
-        // --- 바닥 산 그리기 ---
-        const gradientBottom = ctx.createLinearGradient(0, canvas.height - obs.bottomMountainHeight, 0, canvas.height);
-        gradientBottom.addColorStop(0, '#475569');
-        gradientBottom.addColorStop(1, '#0f172a');
-
-        ctx.fillStyle = gradientBottom;
-        ctx.beginPath();
-        ctx.moveTo(obs.x, canvas.height);
-        ctx.lineTo(obs.x + obs.mountainWidth / 2, canvas.height - obs.bottomMountainHeight);
-        ctx.lineTo(obs.x + obs.mountainWidth, canvas.height);
-        ctx.fill();
-        
-        // 바닥 산봉우리 눈 덮인 효과
-        ctx.beginPath();
-        let snowHeightB = obs.bottomMountainHeight * snowRatio;
-        let leftXB = obs.x + (obs.mountainWidth / 2) * (1 - snowRatio);
-        let rightXB = obs.x + obs.mountainWidth / 2 + (obs.mountainWidth / 2) * snowRatio;
-        
-        ctx.moveTo(leftXB, canvas.height - obs.bottomMountainHeight + snowHeightB);
-        ctx.lineTo(obs.x + obs.mountainWidth / 2, canvas.height - obs.bottomMountainHeight);
-        ctx.lineTo(rightXB, canvas.height - obs.bottomMountainHeight + snowHeightB);
-        ctx.lineTo(obs.x + obs.mountainWidth / 2, canvas.height - obs.bottomMountainHeight + snowHeightB + 10);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.moveTo(obs.x, canvas.height);
-        ctx.lineTo(obs.x + obs.mountainWidth / 2, canvas.height - obs.bottomMountainHeight);
-        ctx.lineTo(obs.x + obs.mountainWidth, canvas.height);
-        ctx.stroke();
-
-        // --- 천장 산(종유석) 그리기 ---
-        if (obs.topMountainHeight > 0) {
-            const gradientTop = ctx.createLinearGradient(0, 0, 0, obs.topMountainHeight);
-            gradientTop.addColorStop(0, '#0f172a');
-            gradientTop.addColorStop(1, '#475569');
-
-            ctx.fillStyle = gradientTop;
-            ctx.beginPath();
-            ctx.moveTo(obs.x, 0);
-            ctx.lineTo(obs.x + obs.mountainWidth / 2, obs.topMountainHeight);
-            ctx.lineTo(obs.x + obs.mountainWidth, 0);
-            ctx.fill();
-            
-            // 천장 산봉우리 눈 덮인 효과
-            ctx.beginPath();
-            let snowHeightT = obs.topMountainHeight * snowRatio;
-            let leftXT = obs.x + (obs.mountainWidth / 2) * (1 - snowRatio);
-            let rightXT = obs.x + obs.mountainWidth / 2 + (obs.mountainWidth / 2) * snowRatio;
-            
-            ctx.moveTo(leftXT, obs.topMountainHeight - snowHeightT);
-            ctx.lineTo(obs.x + obs.mountainWidth / 2, obs.topMountainHeight);
-            ctx.lineTo(rightXT, obs.topMountainHeight - snowHeightT);
-            ctx.lineTo(obs.x + obs.mountainWidth / 2, obs.topMountainHeight - snowHeightT - 10);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(obs.x, 0);
-            ctx.lineTo(obs.x + obs.mountainWidth / 2, obs.topMountainHeight);
-            ctx.lineTo(obs.x + obs.mountainWidth, 0);
-            ctx.stroke();
+        if (obs.draw) {
+            obs.draw(ctx, canvas.height);
         }
     }
 }

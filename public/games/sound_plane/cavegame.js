@@ -16,10 +16,7 @@ const scoreEl = document.getElementById('current-score');
 const finalScoreEl = document.getElementById('final-score');
 const volBar = document.getElementById('vol-bar');
 
-const btnPractice = document.getElementById('btn-practice');
-const btnMountain = document.getElementById('btn-mountain');
 const btnCave = document.getElementById('btn-cave');
-const btnSky = document.getElementById('btn-sky');
 const btnRetry = document.getElementById('btn-retry');
 const btnMenu = document.getElementById('btn-menu');
 const btnBack = document.getElementById('btn-back');
@@ -38,97 +35,13 @@ function getNoteName(note) {
     return `${name}${octave}`;
 }
 
-const MIN_NOTE = 45; // A2 (낮은 라, 남자 저음역대)
-const MAX_NOTE = 74; // D5 (높은 레, 여자 고음역대)
+const MIN_NOTE = 45; 
+const MAX_NOTE = 74; 
 
 // === Global Settings ===
-window.micSensitivity = 5.0; // 최상단(최대치) 고정
+window.micSensitivity = 5.0; 
 
 // === Classes ===
-class MountainObstacle {
-    constructor(canvasWidth, canvasHeight) {
-        this.type = 'mountain';
-        this.x = canvasWidth;
-        this.mountainWidth = Math.random() * 200 + 150;
-        
-        const minH = canvasHeight * 0.1; // 최소 높이 10%
-        const maxH = canvasHeight * 0.75; // 최대 높이 75%
-        
-        // 이전 산과 차이를 눈에 띄게 주기 위해 높이를 더 크게 무작위화
-        const randomFactor = Math.random();
-        if (randomFactor < 0.3) {
-            this.bottomMountainHeight = minH + Math.random() * (canvasHeight * 0.15); // 낮은 산
-        } else if (randomFactor < 0.7) {
-            this.bottomMountainHeight = canvasHeight * 0.35 + Math.random() * (canvasHeight * 0.15); // 중간 산
-        } else {
-            this.bottomMountainHeight = maxH - Math.random() * (canvasHeight * 0.15); // 높은 산
-        }
-        
-        this.topMountainHeight = 0; 
-        
-        this.passed = false;
-        this.width = this.mountainWidth; // For generic scoring logic
-    }
-
-    update(speed) {
-        this.x -= speed;
-    }
-
-    checkCollision(planeCenterX, planeTopY, planeBottomY, planeLeftX, planeRightX, canvasHeight) {
-        if (planeCenterX > this.x && planeCenterX < this.x + this.mountainWidth) {
-            let bottomCurrentHeight = 0;
-            
-            if (planeCenterX < this.x + this.mountainWidth / 2) {
-                let ratio = (planeCenterX - this.x) / (this.mountainWidth / 2);
-                bottomCurrentHeight = this.bottomMountainHeight * ratio;
-            } else {
-                let ratio = (this.x + this.mountainWidth - planeCenterX) / (this.mountainWidth / 2);
-                bottomCurrentHeight = this.bottomMountainHeight * ratio;
-            }
-            
-            if (planeBottomY > canvasHeight - bottomCurrentHeight) {
-                return true; 
-            }
-        }
-        return false;
-    }
-
-    draw(ctx, canvasHeight) {
-        let snowRatio = 0.3; 
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#00f2fe';
-
-        const gradientBottom = ctx.createLinearGradient(0, canvasHeight - this.bottomMountainHeight, 0, canvasHeight);
-        gradientBottom.addColorStop(0, '#475569');
-        gradientBottom.addColorStop(1, '#0f172a');
-
-        ctx.fillStyle = gradientBottom;
-        ctx.beginPath();
-        ctx.moveTo(this.x, canvasHeight);
-        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
-        ctx.lineTo(this.x + this.mountainWidth, canvasHeight);
-        ctx.fill();
-        
-        ctx.beginPath();
-        let snowHeightB = this.bottomMountainHeight * snowRatio;
-        let leftXB = this.x + (this.mountainWidth / 2) * (1 - snowRatio);
-        let rightXB = this.x + this.mountainWidth / 2 + (this.mountainWidth / 2) * snowRatio;
-        
-        ctx.moveTo(leftXB, canvasHeight - this.bottomMountainHeight + snowHeightB);
-        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
-        ctx.lineTo(rightXB, canvasHeight - this.bottomMountainHeight + snowHeightB);
-        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight + snowHeightB + 10);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.moveTo(this.x, canvasHeight);
-        ctx.lineTo(this.x + this.mountainWidth / 2, canvasHeight - this.bottomMountainHeight);
-        ctx.lineTo(this.x + this.mountainWidth, canvasHeight);
-        ctx.stroke();
-    }
-}
-
 class CaveObstacle {
     constructor(canvasWidth, canvasHeight) {
         this.type = 'cave';
@@ -136,6 +49,7 @@ class CaveObstacle {
         this.mountainWidth = Math.random() * 200 + 150;
         
         const minHeight = 50;
+        // 동굴 간격 설정 (더 난이도 있게 조절 가능)
         const gap = Math.random() * 150 + 200; 
         const maxAvailableHeight = canvasHeight - gap;
         
@@ -148,7 +62,7 @@ class CaveObstacle {
         }
         
         this.passed = false;
-        this.width = this.mountainWidth; // For generic scoring logic
+        this.width = this.mountainWidth;
     }
 
     update(speed) {
@@ -249,60 +163,8 @@ class CaveObstacle {
     }
 }
 
-class SkyObstacle {
-    constructor(canvasWidth, canvasHeight) {
-        this.type = 'cloud';
-        this.width = Math.random() * 80 + 120;
-        this.height = Math.random() * 60 + 60;
-        this.x = canvasWidth;
-        this.y = Math.random() * (canvasHeight - this.height - 40) + 20;
-        this.passed = false;
-    }
-
-    update(speed) {
-        this.x -= speed;
-    }
-
-    checkCollision(planeCenterX, planeTopY, planeBottomY, planeLeftX, planeRightX) {
-        let cLeft = this.x + 10;
-        let cRight = this.x + this.width - 10;
-        let cTop = this.y + 10;
-        let cBottom = this.y + this.height - 10;
-
-        if (planeRightX > cLeft && planeLeftX < cRight &&
-            planeBottomY > cTop && planeTopY < cBottom) {
-            return true;
-        }
-        return false;
-    }
-
-    draw(ctx) {
-        ctx.fillStyle = 'rgba(71, 85, 105, 0.85)';
-        ctx.beginPath();
-        ctx.arc(this.x + this.width * 0.3, this.y + this.height * 0.5, this.height * 0.4, 0, Math.PI * 2);
-        ctx.arc(this.x + this.width * 0.7, this.y + this.height * 0.5, this.height * 0.4, 0, Math.PI * 2);
-        ctx.arc(this.x + this.width * 0.5, this.y + this.height * 0.3, this.height * 0.5, 0, Math.PI * 2);
-        ctx.arc(this.x + this.width * 0.5, this.y + this.height * 0.7, this.height * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        if (Math.random() < 0.1) {
-            ctx.strokeStyle = '#facc15';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.beginPath();
-            ctx.moveTo(this.x + this.width / 2, this.y + this.height * 0.8);
-            ctx.lineTo(this.x + this.width / 2 - 10, this.y + this.height * 0.8 + 15);
-            ctx.lineTo(this.x + this.width / 2 + 5, this.y + this.height * 0.8 + 15);
-            ctx.lineTo(this.x + this.width / 2 - 5, this.y + this.height * 0.8 + 35);
-            ctx.stroke();
-        }
-    }
-}
-
 // === Game State ===
-let gameState = 'START'; // 'START', 'PRACTICE', 'CAVE', 'GAMEOVER'
-let lastMode = 'PRACTICE';
+let gameState = 'START'; 
 let score = 0;
 let frameCount = 0;
 let animationId;
@@ -319,14 +181,12 @@ const airplane = {
     velocity: 0,
     gravity: 0.18, 
     lift: -0.45,   
-    maxFallSpeed: 5,   // 하강 최대 속도 제한
-    maxRiseSpeed: -5   // 상승 최대 속도 제한
+    maxFallSpeed: 5,   
+    maxRiseSpeed: -5   
 };
 
 let obstacles = [];
 const baseObstacleSpeed = 2.5;
-
-// === Game Logic Functions ===
 
 function resetGame() {
     airplane.y = canvas.height / 2;
@@ -341,14 +201,7 @@ function resetGame() {
 }
 
 function spawnObstacle() {
-    if (gameState === 'SKY') {
-        obstacles.push(new SkyObstacle(canvas.width, canvas.height));
-    } else if (gameState === 'CAVE') {
-        obstacles.push(new CaveObstacle(canvas.width, canvas.height));
-    } else {
-        // MOUNTAIN 로직
-        obstacles.push(new MountainObstacle(canvas.width, canvas.height));
-    }
+    obstacles.push(new CaveObstacle(canvas.width, canvas.height));
 }
 
 function createParticles(x, y, count = 15) {
@@ -379,22 +232,19 @@ function updateParticles() {
 
 function update() {
     const audioData = window.audioManager.getPitch();
-    const pitch = audioData.pitch; // 즉각적으로 피치 읽어오기
+    const pitch = audioData.pitch; 
 
     if (pitch > -1) {
         let note = noteFromPitch(pitch);
         document.getElementById('note-display').innerText = getNoteName(note);
 
-        // 낮은 라(MIN_NOTE)부터 높은 레(MAX_NOTE) 매핑
         let mapped = (note - MIN_NOTE) / (MAX_NOTE - MIN_NOTE);
         mapped = Math.max(0, Math.min(1, mapped));
         volBar.style.width = `${mapped * 100}%`;
 
-        // 피치에 기반한 목표 높이 (놓은 음일수록 위로)
         let targetY = canvas.height - (mapped * canvas.height);
         targetY = Math.min(canvas.height - airplane.height, Math.max(0, targetY));
 
-        // 민첩하고 즉각적으로 목표 높이를 향해 가속 (반응속도 대폭 상승)
         airplane.velocity += ((targetY - airplane.y) * 0.2 - airplane.velocity) * 0.5;
         
         if (frameCount % 3 === 0) {
@@ -409,74 +259,58 @@ function update() {
             });
         }
     } else {
-        // 소리가 없으면 곧바로 떨어짐
         document.getElementById('note-display').innerText = '-';
         volBar.style.width = `0%`;
         airplane.velocity += (airplane.maxFallSpeed - airplane.velocity) * 0.2;
     }
 
-    // 속도 제한 (순간적인 텔레포트 및 튕김 완벽 차단)
     if (airplane.velocity > airplane.maxFallSpeed) airplane.velocity = airplane.maxFallSpeed;
     if (airplane.velocity < airplane.maxRiseSpeed) airplane.velocity = airplane.maxRiseSpeed;
 
     updateParticles();
     airplane.y += airplane.velocity;
 
-    // 천장, 바닥 충돌 처리
     if (airplane.y + airplane.height > canvas.height) {
         airplane.y = canvas.height - airplane.height;
         airplane.velocity = 0;
-        if (gameState === 'MOUNTAIN' || gameState === 'CAVE' || gameState === 'SKY') gameOver();
+        gameOver();
     }
     if (airplane.y < 0) {
         airplane.y = 0;
         airplane.velocity = 0;
-        // 천장에 닿아도 죽지 않음!
     }
 
-    // === 장애물 로직 ===
-    if (gameState === 'MOUNTAIN' || gameState === 'CAVE' || gameState === 'SKY') {
-        const currentSpeed = baseObstacleSpeed + (score * 0.02); // 갈수록 증가하는 속도 폭 하향
+    const currentSpeed = baseObstacleSpeed + (score * 0.02); 
 
-        if (frameCount % 140 === 0) { // 장애물 등장 주기
-            spawnObstacle();
+    if (frameCount % 140 === 0) { 
+        spawnObstacle();
+    }
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        obs.update(currentSpeed);
+
+        let planeCenterX = airplane.x + airplane.width / 2;
+        let planeBottomY = airplane.y + airplane.height - 5; 
+        let planeTopY = airplane.y + 5; 
+        let planeLeftX = airplane.x + 5;
+        let planeRightX = airplane.x + airplane.width - 5;
+
+        let hitObstacle = obs.checkCollision(planeCenterX, planeTopY, planeBottomY, planeLeftX, planeRightX, canvas.height);
+
+        if (hitObstacle) {
+            gameOver();
         }
 
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-            let obs = obstacles[i];
-            obs.update(currentSpeed);
-
-            let planeCenterX = airplane.x + airplane.width / 2;
-            let planeBottomY = airplane.y + airplane.height - 5; // margin 5
-            let planeTopY = airplane.y + 5; // margin 5
-            let planeLeftX = airplane.x + 5;
-            let planeRightX = airplane.x + airplane.width - 5;
-
-            let hitObstacle = obs.checkCollision(planeCenterX, planeTopY, planeBottomY, planeLeftX, planeRightX, canvas.height);
-
-            if (hitObstacle) {
-                gameOver();
-            }
-
-            // 점수 증가 로직
-            if (obs.x + obs.width < airplane.x && !obs.passed) {
-                score++;
-                scoreEl.innerText = score;
-                obs.passed = true;
-                // 장애물 통과 시 점수 이펙트용 파티클
-                createParticles(airplane.x + airplane.width, airplane.y, 10);
-            }
-
-            // 화면을 벗어나면 삭제
-            if (obs.x + obs.width < 0) {
-                obstacles.splice(i, 1);
-            }
-        }
-    } else if (gameState === 'PRACTICE') {
-        // 연습 게임: 시간 기반 점수
-        if (frameCount % 60 === 0) {
+        if (obs.x + obs.width < airplane.x && !obs.passed) {
             score++;
             scoreEl.innerText = score;
+            obs.passed = true;
+            createParticles(airplane.x + airplane.width, airplane.y, 10);
+        }
+
+        if (obs.x + obs.width < 0) {
+            obstacles.splice(i, 1);
         }
     }
 
@@ -488,7 +322,7 @@ function update() {
 function drawGrid() {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
     ctx.lineWidth = 1;
-    const speed = (gameState === 'MOUNTAIN' || gameState === 'CAVE' || gameState === 'SKY') ? baseObstacleSpeed : 2;
+    const speed = baseObstacleSpeed;
     const offset = frameCount * speed;
     
     ctx.beginPath();
@@ -506,7 +340,6 @@ function drawPitchLines() {
     ctx.textBaseline = 'bottom';
     ctx.font = 'bold 16px Pretendard, sans-serif';
 
-    // 화면 전체에 대해 옥타브별 온음계(도레미파솔라시)를 배경선으로 표시
     for (let note = MIN_NOTE; note <= MAX_NOTE; note++) {
         let noteType = note % 12;
         let isWholeNote = [0, 2, 4, 5, 7, 9, 11].includes(noteType);
@@ -517,16 +350,15 @@ function drawPitchLines() {
             let isDo = (noteType === 0);
             
             ctx.strokeStyle = isDo ? 'rgba(0, 242, 254, 0.3)' : 'rgba(255, 255, 255, 0.08)';
-            if (isDo) ctx.setLineDash([10, 5]); // '도' 라인은 점선 효과로 눈에 잘 띄게
+            if (isDo) ctx.setLineDash([10, 5]); 
             else ctx.setLineDash([]);
             
             ctx.beginPath();
             ctx.moveTo(0, y);
             ctx.lineTo(canvas.width, y);
             ctx.stroke();
-            ctx.setLineDash([]); // 복구
+            ctx.setLineDash([]); 
 
-            // 화면 우측 끝에 음계 이름 그리기
             let name = getNoteName(note); 
             ctx.fillStyle = isDo ? 'rgba(0, 242, 254, 0.8)' : 'rgba(255, 255, 255, 0.3)';
             ctx.fillText(name, canvas.width - 20, y - 5);
@@ -548,7 +380,6 @@ function drawParticles() {
 function drawAirplane() {
     ctx.save();
     
-    // 기울기 시각 효과 (최대 30도까지만 기울어져 뒤집히지 않음)
     ctx.translate(airplane.x + airplane.width/2, airplane.y + airplane.height/2);
     let targetAngle = airplane.velocity * 5;
     if (targetAngle > 30) targetAngle = 30;
@@ -556,13 +387,11 @@ function drawAirplane() {
     ctx.rotate(targetAngle * Math.PI / 180);
     ctx.translate(-(airplane.x + airplane.width/2), -(airplane.y + airplane.height/2));
 
-    // 몸체
     ctx.fillStyle = '#ffb703';
     ctx.beginPath();
     ctx.roundRect(airplane.x, airplane.y + 5, airplane.width, 20, 10);
     ctx.fill();
 
-    // 꼬리 날개
     ctx.fillStyle = '#fb8500';
     ctx.beginPath();
     ctx.moveTo(airplane.x + 5, airplane.y + 15);
@@ -570,7 +399,6 @@ function drawAirplane() {
     ctx.lineTo(airplane.x + 15, airplane.y + 5);
     ctx.fill();
 
-    // 메인 날개
     ctx.fillStyle = '#00f2fe';
     ctx.beginPath();
     ctx.moveTo(airplane.x + 15, airplane.y + 20);
@@ -578,7 +406,6 @@ function drawAirplane() {
     ctx.lineTo(airplane.x + 40, airplane.y + 20);
     ctx.fill();
 
-    // 창문
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(airplane.x + 35, airplane.y + 12, 4, 0, Math.PI*2);
@@ -596,7 +423,6 @@ function drawObstacles() {
 }
 
 function draw() {
-    // 배경 클리어
     const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     bgGradient.addColorStop(0, '#0f172a');
     bgGradient.addColorStop(1, '#1e1b4b');
@@ -605,18 +431,13 @@ function draw() {
 
     drawGrid();
     drawPitchLines();
-
-    // 모드에 따라 렌더링
-    if (gameState === 'MOUNTAIN' || gameState === 'CAVE' || gameState === 'SKY') {
-        drawObstacles();
-    }
-
+    drawObstacles();
     drawParticles();
     drawAirplane();
 }
 
 function gameLoop() {
-    if (gameState === 'PRACTICE' || gameState === 'MOUNTAIN' || gameState === 'CAVE' || gameState === 'SKY') {
+    if (gameState === 'PLAYING') {
         update();
         draw();
         animationId = requestAnimationFrame(gameLoop);
@@ -625,13 +446,12 @@ function gameLoop() {
 
 // === Flow Control ===
 
-function startGame(mode) {
+function startGame() {
     window.audioManager.init().then(success => {
         if (success) {
             window.audioManager.resumeContext();
             
-            lastMode = mode;
-            gameState = mode;
+            gameState = 'PLAYING';
             resetGame();
             
             startScreen.classList.remove('active');
@@ -647,9 +467,8 @@ function gameOver() {
     gameState = 'GAMEOVER';
     cancelAnimationFrame(animationId);
     
-    // 폭발 이펙트 생성 및 그리기
     createParticles(airplane.x + airplane.width/2, airplane.y + airplane.height/2, 30);
-    drawParticles(); // 한 프레임 그려주기
+    drawParticles(); 
     
     finalScoreEl.innerText = score;
     hud.classList.add('hidden');
@@ -657,15 +476,16 @@ function gameOver() {
 }
 
 // === Events ===
-btnPractice?.addEventListener('click', () => startGame('PRACTICE'));
-btnMountain?.addEventListener('click', () => startGame('MOUNTAIN'));
-btnCave?.addEventListener('click', () => startGame('CAVE'));
-btnSky?.addEventListener('click', () => startGame('SKY'));
-btnRetry?.addEventListener('click', () => startGame(lastMode));
+btnCave?.addEventListener('click', () => startGame());
+btnRetry?.addEventListener('click', () => startGame());
 btnMenu?.addEventListener('click', () => {
     window.location.href = 'index.html';
 });
 
 btnBack?.addEventListener('click', () => {
     window.location.href = 'index.html';
+});
+
+window.addEventListener('load', () => {
+    startGame();
 });

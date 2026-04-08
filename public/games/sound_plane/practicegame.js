@@ -1,0 +1,325 @@
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// === UI Elements ===
+const startScreen = document.getElementById('start-screen');
+const gameoverScreen = document.getElementById('gameover-screen');
+const hud = document.getElementById('hud');
+const scoreEl = document.getElementById('current-score');
+const finalScoreEl = document.getElementById('final-score');
+const volBar = document.getElementById('vol-bar');
+
+const btnPractice = document.getElementById('btn-practice');
+const btnRetry = document.getElementById('btn-retry');
+const btnMenu = document.getElementById('btn-menu');
+const btnBack = document.getElementById('btn-back');
+
+// === Pitch Data ===
+const noteKorean = ["도", "도#", "레", "레#", "미", "파", "파#", "솔", "솔#", "라", "라#", "시"];
+
+function noteFromPitch(frequency) {
+    let noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+    return Math.round(noteNum) + 69;
+}
+
+function getNoteName(note) {
+    let name = noteKorean[note % 12];
+    let octave = Math.floor(note / 12) - 1;
+    return `${name}${octave}`;
+}
+
+const MIN_NOTE = 45; 
+const MAX_NOTE = 74; 
+
+// === Global Settings ===
+window.micSensitivity = 5.0; 
+
+// === Game State ===
+let gameState = 'START'; 
+let score = 0;
+let frameCount = 0;
+let animationId;
+let particles = [];
+let lastPitchUpdateTime = 0;
+let currentVisualPitch = -1;
+
+// === Entities ===
+const airplane = {
+    x: 150,
+    y: 300,
+    width: 50,
+    height: 30,
+    velocity: 0,
+    gravity: 0.18, 
+    lift: -0.45,   
+    maxFallSpeed: 5,   
+    maxRiseSpeed: -5   
+};
+
+function resetGame() {
+    airplane.y = canvas.height / 2;
+    airplane.velocity = 0;
+    particles = [];
+    score = 0;
+    frameCount = 0;
+    lastPitchUpdateTime = Date.now();
+    currentVisualPitch = -1;
+    scoreEl.innerText = score;
+}
+
+function createParticles(x, y, count = 15) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.5) * 8,
+            life: 1,
+            decay: 0.02 + Math.random() * 0.03,
+            color: Math.random() > 0.5 ? '#00f2fe' : '#4facfe'
+        });
+    }
+}
+
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+function update() {
+    const audioData = window.audioManager.getPitch();
+    const pitch = audioData.pitch; 
+
+    if (pitch > -1) {
+        let note = noteFromPitch(pitch);
+        document.getElementById('note-display').innerText = getNoteName(note);
+
+        let mapped = (note - MIN_NOTE) / (MAX_NOTE - MIN_NOTE);
+        mapped = Math.max(0, Math.min(1, mapped));
+        volBar.style.width = `${mapped * 100}%`;
+
+        let targetY = canvas.height - (mapped * canvas.height);
+        targetY = Math.min(canvas.height - airplane.height, Math.max(0, targetY));
+
+        airplane.velocity += ((targetY - airplane.y) * 0.2 - airplane.velocity) * 0.5;
+        
+        if (frameCount % 3 === 0) {
+            particles.push({
+                x: airplane.x,
+                y: airplane.y + airplane.height / 2,
+                vx: -2 - Math.random() * 2,
+                vy: (Math.random() - 0.5) * 2,
+                life: 1,
+                decay: 0.05,
+                color: '#00f2fe'
+            });
+        }
+    } else {
+        document.getElementById('note-display').innerText = '-';
+        volBar.style.width = `0%`;
+        airplane.velocity += (airplane.maxFallSpeed - airplane.velocity) * 0.2;
+    }
+
+    if (airplane.velocity > airplane.maxFallSpeed) airplane.velocity = airplane.maxFallSpeed;
+    if (airplane.velocity < airplane.maxRiseSpeed) airplane.velocity = airplane.maxRiseSpeed;
+
+    updateParticles();
+    airplane.y += airplane.velocity;
+
+    // 연습 모드에서는 천장/바닥 닿아도 죽지 않게 유지 가능하나, 원본은 죽게 했었는지 확인 (일단 천장은 유지, 바닥은 안죽게? 원래 PRACTICE는 안죽음)
+    if (airplane.y + airplane.height > canvas.height) {
+        airplane.y = canvas.height - airplane.height;
+        airplane.velocity = 0;
+    }
+    if (airplane.y < 0) {
+        airplane.y = 0;
+        airplane.velocity = 0;
+    }
+
+    // 연습 게임: 시간 기반 점수
+    if (frameCount % 60 === 0) {
+        score++;
+        scoreEl.innerText = score;
+    }
+
+    frameCount++;
+}
+
+// === Draw Functions ===
+
+function drawGrid() {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.lineWidth = 1;
+    // 연습 모드는 장애물이 없으므로 고정 속도로 배경 이동 효과
+    const speed = 2;
+    const offset = frameCount * speed;
+    
+    ctx.beginPath();
+    for (let x = 0; x <= canvas.width + 40; x += 40) {
+        let posX = x - (offset % 40);
+        ctx.moveTo(posX, 0);
+        ctx.lineTo(posX, canvas.height);
+    }
+    ctx.stroke();
+}
+
+function drawPitchLines() {
+    ctx.lineWidth = 1;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.font = 'bold 16px Pretendard, sans-serif';
+
+    for (let note = MIN_NOTE; note <= MAX_NOTE; note++) {
+        let noteType = note % 12;
+        let isWholeNote = [0, 2, 4, 5, 7, 9, 11].includes(noteType);
+        
+        if (isWholeNote) {
+            let mapped = (note - MIN_NOTE) / (MAX_NOTE - MIN_NOTE);
+            let y = canvas.height - (mapped * canvas.height);
+            let isDo = (noteType === 0);
+            
+            ctx.strokeStyle = isDo ? 'rgba(0, 242, 254, 0.3)' : 'rgba(255, 255, 255, 0.08)';
+            if (isDo) ctx.setLineDash([10, 5]); 
+            else ctx.setLineDash([]);
+            
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+            ctx.setLineDash([]); 
+
+            let name = getNoteName(note); 
+            ctx.fillStyle = isDo ? 'rgba(0, 242, 254, 0.8)' : 'rgba(255, 255, 255, 0.3)';
+            ctx.fillText(name, canvas.width - 20, y - 5);
+        }
+    }
+}
+
+function drawParticles() {
+    for (let p of particles) {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.random() * 3 + 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
+}
+
+function drawAirplane() {
+    ctx.save();
+    
+    ctx.translate(airplane.x + airplane.width/2, airplane.y + airplane.height/2);
+    let targetAngle = airplane.velocity * 5;
+    if (targetAngle > 30) targetAngle = 30;
+    if (targetAngle < -30) targetAngle = -30;
+    ctx.rotate(targetAngle * Math.PI / 180);
+    ctx.translate(-(airplane.x + airplane.width/2), -(airplane.y + airplane.height/2));
+
+    ctx.fillStyle = '#ffb703';
+    ctx.beginPath();
+    ctx.roundRect(airplane.x, airplane.y + 5, airplane.width, 20, 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#fb8500';
+    ctx.beginPath();
+    ctx.moveTo(airplane.x + 5, airplane.y + 15);
+    ctx.lineTo(airplane.x - 5, airplane.y - 5);
+    ctx.lineTo(airplane.x + 15, airplane.y + 5);
+    ctx.fill();
+
+    ctx.fillStyle = '#00f2fe';
+    ctx.beginPath();
+    ctx.moveTo(airplane.x + 15, airplane.y + 20);
+    ctx.lineTo(airplane.x + 25, airplane.y + 35);
+    ctx.lineTo(airplane.x + 40, airplane.y + 20);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(airplane.x + 35, airplane.y + 12, 4, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function draw() {
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGradient.addColorStop(0, '#0f172a');
+    bgGradient.addColorStop(1, '#1e1b4b');
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawGrid();
+    drawPitchLines();
+    drawParticles();
+    drawAirplane();
+}
+
+function gameLoop() {
+    if (gameState === 'PLAYING') {
+        update();
+        draw();
+        animationId = requestAnimationFrame(gameLoop);
+    }
+}
+
+// === Flow Control ===
+
+function startGame() {
+    window.audioManager.init().then(success => {
+        if (success) {
+            window.audioManager.resumeContext();
+            
+            gameState = 'PLAYING';
+            resetGame();
+            
+            startScreen.classList.remove('active');
+            gameoverScreen.classList.remove('active');
+            hud.classList.remove('hidden');
+            
+            gameLoop();
+        }
+    });
+}
+
+function gameOver() {
+    gameState = 'GAMEOVER';
+    cancelAnimationFrame(animationId);
+    
+    createParticles(airplane.x + airplane.width/2, airplane.y + airplane.height/2, 30);
+    drawParticles(); 
+    
+    finalScoreEl.innerText = score;
+    hud.classList.add('hidden');
+    gameoverScreen.classList.add('active');
+}
+
+// === Events ===
+btnPractice?.addEventListener('click', () => startGame());
+btnRetry?.addEventListener('click', () => startGame());
+btnMenu?.addEventListener('click', () => {
+    window.location.href = 'index.html';
+});
+
+btnBack?.addEventListener('click', () => {
+    window.location.href = 'index.html';
+});
+
+window.addEventListener('load', () => {
+    startGame();
+});

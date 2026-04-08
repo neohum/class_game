@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소리 비행기 (Voice Flight)</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-layer">
+            <!-- Start Screen -->
+            <div id="start-screen" class="screen active">
+                <a href="/" style="position: absolute; top: 20px; left: 20px; padding: 12px 24px; background: #FF9F43; color: white; border-radius: 25px; text-decoration: none; font-weight: bold; font-family: 'Jua', sans-serif; font-size: 1.2rem; box-shadow: 0 5px 0 #E67E22; z-index: 1000; border: 3px solid #fff;">🏠 허브로 돌아가기</a>
+                
+                <div class="logo">
+                    <div class="logo-icon">🔊✈️</div>
+                    <h1>소리 비행기 (연습 모드)</h1>
+                </div>
+                <p>마이크의 소리 크기로 비행기를 조종해 보세요!<br>장애물 없이 자유롭게 높낮이를 연습할 수 있습니다.</p>
+                
+                <div class="buttons" style="margin-bottom: 20px;">
+                    <button type="button" id="btn-practice" style="font-size: 1.5rem; padding: 15px 40px; background-color: #3498db; box-shadow: 0 5px 0 #2980b9;">▶ 바로 게임 시작</button>
+                </div>
+                
+                <p style="font-size: 1.1rem; color: #fff; margin-bottom: 10px;">또는 다른 모드 선택:</p>
+                <div class="buttons" style="gap: 10px;">
+                    <button type="button" onclick="window.location.href='index.html'" style="font-size: 1rem; padding: 10px 15px; background: #2ecc71; box-shadow: 0 4px 0 #27ae60;">산맥 비행 (기본)</button>
+                    <button type="button" onclick="window.location.href='cave.html'" style="font-size: 1rem; padding: 10px 15px; background: #9b59b6; box-shadow: 0 4px 0 #8e44ad;">동굴 비행 (심화)</button>
+                    <button type="button" onclick="window.location.href='sky.html'" style="font-size: 1rem; padding: 10px 15px; background: #e67e22; box-shadow: 0 4px 0 #d35400;">하늘 비행 (비구름)</button>
+                </div>
+
+                <p class="warning" style="margin-top: 20px;">※ 마이크 권한을 허용해야 게임이 진행됩니다.</p>
+            </div>
+            
+            <!-- Game Over Screen -->
+            <div id="gameover-screen" class="screen">
+                <h1>종료!</h1>
+                <div class="score-display">
+                    <p>점수: <span id="final-score">0</span></p>
+                </div>
+                <div class="buttons">
+                    <button type="button" id="btn-retry">다시 하기</button>
+                    <button type="button" id="btn-menu">메인 메뉴</button>
+                </div>
+            </div>
+            
+            <!-- HUD (Heads Up Display) -->
+            <div id="hud" class="hidden">
+                <button type="button" id="btn-back" style="padding: 10px 20px; font-size: 16px;">이전으로</button>
+                <div class="score" style="position: absolute; left: 50%; transform: translateX(-50%); text-align: center; min-width: 150px;">점수: <span id="current-score">0</span></div>
+                <div class="vol-meter" style="width: 280px; justify-content: flex-end; gap: 10px; margin-left: auto;">
+                    <span style="white-space: nowrap;">음: <strong id="note-display" style="display: inline-block; width: 50px; text-align: left; color: #00f2fe; font-size: 24px;">-</strong></span>
+                    <div class="vol-bar-bg" style="width: 120px;">
+                        <div class="vol-bar" id="vol-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="audio.js?v=20240408"></script>
+    <script src="practicegame.js?v=2024040801"></script>
+</body>
+</html>

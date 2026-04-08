@@ -95,6 +95,8 @@ p {
 .buttons {
     display: flex;
     gap: 20px;
+    flex-wrap: wrap; /* 모바일 등 작은 화면에서 줄바꿈 방지용 */
+    justify-content: center;
 }
 
 button {
@@ -102,6 +104,7 @@ button {
     background: linear-gradient(45deg, #00c6ff, #0072ff);
     border: none;
     padding: 16px 32px;
+    white-space: nowrap; /* 텍스트 줄바꿈 방지 */
     font-size: 18px;
     font-weight: 700;
     color: white;

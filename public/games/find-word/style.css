@@ -242,6 +242,7 @@ body {
 }
 
 .grid-cell {
+    position: relative;
     background: var(--cell-bg);
     border-radius: 8px;
     display: flex;
@@ -255,6 +256,22 @@ body {
     user-select: none;
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     border: 2px solid transparent;
+}
+
+.grid-cell::before {
+    content: attr(data-number);
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: var(--primary-color);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 4px;
+    border-radius: 6px;
+    z-index: 1;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .grid-cell:hover:not(.found):not(.active) {

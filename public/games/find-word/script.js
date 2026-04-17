@@ -128,6 +128,7 @@ function renderBoard() {
         const cell = document.createElement('div');
         cell.classList.add('grid-cell');
         cell.dataset.index = i;
+        cell.dataset.number = i + 1;
         cell.innerText = gridLetters[i];
         cell.addEventListener('click', () => handleCellClick(i));
         boardEl.appendChild(cell);

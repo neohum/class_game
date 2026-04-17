@@ -38,7 +38,12 @@ const btnBackMenu = document.getElementById('btn-back-menu');
 const btnPauseBackMenu = document.getElementById('btn-pause-back-menu');
 const btnResume = document.getElementById('btn-resume');
 
+const btnCheckWord = document.getElementById('btn-check-word');
+const btnClearSelection = document.getElementById('btn-clear-selection');
+
 const pauseOverlay = document.getElementById('pause-overlay');
+const completeOverlay = document.getElementById('complete-overlay');
+const btnCompleteBackMenu = document.getElementById('btn-complete-back-menu');
 
 // Stage definitions
 const levelConfig = {
@@ -61,10 +66,15 @@ function showMenu() {
     menuScreen.classList.remove('hidden');
     isPaused = false;
     pauseOverlay.classList.add('hidden');
+    if (completeOverlay) completeOverlay.classList.add('hidden');
 }
 
 btnBackMenu.addEventListener('click', showMenu);
 btnPauseBackMenu.addEventListener('click', showMenu);
+if (btnCompleteBackMenu) btnCompleteBackMenu.addEventListener('click', showMenu);
+
+if (btnClearSelection) btnClearSelection.addEventListener('click', clearSelection);
+if (btnCheckWord) btnCheckWord.addEventListener('click', checkWordValidity);
 
 function startGame(level) {
     const config = levelConfig[level];
@@ -135,47 +145,115 @@ function renderBoard() {
     }
 }
 
+function clearSelection() {
+    selectedIndices.forEach(idx => {
+        const el = boardEl.children[idx];
+        if (el) {
+            el.classList.remove('active');
+            el.classList.remove('error');
+        }
+    });
+    selectedIndices = [];
+    updateSelectionDisplay();
+}
+
 function handleCellClick(index) {
     if (isPaused) return;
     
     const cellEl = boardEl.children[index];
-    
-    if (cellEl.classList.contains('found') || selectedIndices.includes(index)) return;
+    if (cellEl.classList.contains('found')) return;
 
-    const testIndices = [...selectedIndices, index];
-    const sequenceStr = testIndices.map(idx => gridLetters[idx]).join('');
-
-    // Important Rule Change: Check against EVERY word in dictionary, not just pre-seeded ones
-    const isPrefixValid = dictionary.some(item => item.word && item.word.startsWith(sequenceStr));
-
-    if (isPrefixValid) {
-        selectedIndices.push(index);
-        cellEl.classList.add('active');
-        updateSelectionDisplay();
-
-        const matchedWordObj = dictionary.find(item => item.word && item.word === sequenceStr);
-        if (matchedWordObj) {
-            handleWordFound(matchedWordObj);
-        }
-    } else {
-        cellEl.classList.add('error');
-        selectedIndices.forEach(idx => {
-            boardEl.children[idx].classList.add('error');
-        });
-
-        setTimeout(() => {
-            cellEl.classList.remove('error');
-            selectedIndices.forEach(idx => {
-                const el = boardEl.children[idx];
-                if (el) {
-                    el.classList.remove('error');
-                    el.classList.remove('active');
-                }
-            });
-            selectedIndices = [];
+    if (selectedIndices.includes(index)) {
+        if (selectedIndices[selectedIndices.length - 1] === index) {
+            selectedIndices.pop();
+            cellEl.classList.remove('active');
             updateSelectionDisplay();
-        }, 400);
+        }
+        return;
     }
+
+    selectedIndices.push(index);
+    cellEl.classList.add('active');
+    updateSelectionDisplay();
+}
+
+async function checkWordValidity() {
+    if (selectedIndices.length < 1) return;
+    if (isPaused) return;
+    
+    const sequenceStr = selectedIndices.map(idx => gridLetters[idx]).join('');
+    
+    btnCheckWord.innerText = '검색 중...';
+    btnCheckWord.disabled = true;
+    
+    try {
+        const localMatch = dictionary.find(item => item.word === sequenceStr);
+        if (localMatch) {
+            handleWordFound(localMatch);
+            resetCheckBtn();
+            return;
+        }
+
+        const encodedWord = encodeURIComponent(sequenceStr);
+        let foundMeaning = null;
+        let isValid = false;
+
+        // 1. Try Wikipedia REST API for high-quality rich text extract
+        try {
+            const wikiUrl = `https://ko.wikipedia.org/api/rest_v1/page/summary/${encodedWord}`;
+            const wikiRes = await fetch(wikiUrl);
+            if (wikiRes.status === 200) {
+                const wikiData = await wikiRes.json();
+                if (wikiData.extract && wikiData.extract.length > 5 && !wikiData.extract.includes("may refer to")) {
+                    foundMeaning = wikiData.extract.substring(0, 150);
+                    isValid = true;
+                }
+            }
+        } catch(wikiErr) {
+            console.log("Wikipedia missed, falling back to Wiktionary");
+        }
+
+        // 2. Fallback to Wiktionary OpenSearch (Verifies word existence even if extract fails)
+        if (!isValid) {
+            const dictUrl = `https://ko.wiktionary.org/w/api.php?action=opensearch&search=${encodedWord}&limit=1&format=json&origin=*`;
+            const dictRes = await fetch(dictUrl);
+            const dictData = await dictRes.json();
+            
+            if (dictData && dictData[1] && dictData[1].length > 0 && dictData[1][0] === sequenceStr) {
+                isValid = true;
+                foundMeaning = "국어사전에 등재된 유효한 한국어 단어입니다.";
+            }
+        }
+        
+        resetCheckBtn();
+
+        if (isValid) {
+            handleWordFound({ word: sequenceStr, meaning: foundMeaning + " (오픈백과)" });
+        } else {
+            showError();
+        }
+
+    } catch (e) {
+        console.error("API Error", e);
+        resetCheckBtn();
+        showError();
+    }
+}
+
+function resetCheckBtn() {
+    btnCheckWord.innerText = '정답 확인';
+    btnCheckWord.disabled = false;
+}
+
+function showError() {
+    selectedIndices.forEach(idx => {
+        const el = boardEl.children[idx];
+        if (el) el.classList.add('error');
+    });
+
+    setTimeout(() => {
+        clearSelection();
+    }, 400);
 }
 
 function handleWordFound(wordObj) {
@@ -193,6 +271,55 @@ function handleWordFound(wordObj) {
     selectedIndices = [];
     updateSelectionDisplay();
     addWordToLog(wordObj);
+    
+    // Evaluate if game is complete after animation finishes
+    setTimeout(checkGameComplete, 550);
+}
+
+function checkGameComplete() {
+    const remainingChars = [];
+    for (let i = 0; i < gridLetters.length; i++) {
+        const el = boardEl.children[i];
+        if (!el.classList.contains('found')) {
+            remainingChars.push(gridLetters[i]);
+        }
+    }
+
+    if (remainingChars.length === 0) {
+        completeOverlay.classList.remove('hidden');
+        return;
+    }
+
+    const remainFreq = {};
+    for (let char of remainingChars) {
+        remainFreq[char] = (remainFreq[char] || 0) + 1;
+    }
+
+    // Check if ANY base dictionary word can still be formed
+    for (let i = 0; i < dictionary.length; i++) {
+        const word = dictionary[i].word;
+        if (!word) continue;
+
+        const wordFreq = {};
+        for (let char of word) {
+            wordFreq[char] = (wordFreq[char] || 0) + 1;
+        }
+
+        let canForm = true;
+        for (let char in wordFreq) {
+            if (!remainFreq[char] || remainFreq[char] < wordFreq[char]) {
+                canForm = false;
+                break;
+            }
+        }
+
+        if (canForm) {
+            return; // Game not complete, valid subset exists
+        }
+    }
+
+    // Completely exhausted
+    completeOverlay.classList.remove('hidden');
 }
 
 function updateSelectionDisplay() {

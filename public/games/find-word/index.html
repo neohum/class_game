@@ -54,25 +54,36 @@
                     <button id="btn-resume" class="btn primary">계속 하기</button>
                     <button id="btn-pause-back-menu" class="btn secondary" style="margin-top: 10px;">이전 화면</button>
                 </div>
+                
+                <!-- Complete overlay -->
+                <div id="complete-overlay" class="overlay hidden" style="background: rgba(255, 255, 255, 0.95);">
+                    <h2 style="color: #6c5ce7; font-size: 3rem; margin-bottom: 0;">🎉 완료! 🎉</h2>
+                    <p style="font-size: 1.2rem; margin-top: 10px; margin-bottom: 20px;">더 이상 조합할 수 있는 기본 단어가 없습니다!</p>
+                    <button id="btn-complete-back-menu" class="btn primary" style="font-size: 1.2rem; padding: 10px 30px;">메뉴로 돌아가기</button>
+                </div>
 
 
             </section>
 
             <!-- Right: Info Panel -->
             <section class="info-section">
+                <!-- Found Words Log -->
+                <div class="panel found-words-panel">
+                    <h3>찾은 단어 뜻 (<span id="found-count">0</span>)</h3>
+                    <div id="found-words-list" class="words-list">
+                        <!-- Found words will appear here -->
+                    </div>
+                </div>
+
                 <!-- Current Selection -->
                 <div class="panel current-selection-panel">
                     <h3>현재 선택한 글자</h3>
                     <div id="current-selection-display" class="selection-display">
                         <span class="placeholder">글자를 클릭하세요</span>
                     </div>
-                </div>
-
-                <!-- Found Words Log -->
-                <div class="panel found-words-panel">
-                    <h3>찾은 단어 뜻 (<span id="found-count">0</span>)</h3>
-                    <div id="found-words-list" class="words-list">
-                        <!-- Found words will appear here -->
+                    <div class="action-buttons" style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button id="btn-clear-selection" class="btn secondary" style="flex: 1;">선택 취소</button>
+                        <button id="btn-check-word" class="btn primary" style="flex: 2;">정답 확인</button>
                     </div>
                 </div>
             </section>

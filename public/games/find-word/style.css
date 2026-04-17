@@ -412,7 +412,7 @@ body {
 
 /* Found Words Panel */
 .found-words-panel {
-    max-height: 400px;
+    height: 350px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -420,7 +420,7 @@ body {
 
 .words-list {
     overflow-y: auto;
-    flex-grow: 1;
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.8rem;

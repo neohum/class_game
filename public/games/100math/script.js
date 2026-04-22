@@ -303,14 +303,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 datasets: [{
                     label: '클리어 시간 (초)',
                     data: times,
-                    borderColor: '#4F46E5',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                    borderWidth: 3,
-                    pointBackgroundColor: '#10B981',
-                    pointRadius: 5,
-                    pointHoverRadius: 8,
+                    borderColor: '#5B8DEF',
+                    backgroundColor: 'rgba(91, 141, 239, 0.15)',
+                    borderWidth: 4,
+                    pointBackgroundColor: '#FF6B9D',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 9,
                     fill: true,
-                    tension: 0.3
+                    tension: 0.35
                 }]
             },
             options: {

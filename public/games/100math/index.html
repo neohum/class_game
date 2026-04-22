@@ -11,15 +11,35 @@
     <script src="script.js" defer></script>
 </head>
 <body>
+    <!-- Floating math decorations -->
+    <div class="bg-decorations" aria-hidden="true">
+        <span class="deco deco-1">➕</span>
+        <span class="deco deco-2">✖️</span>
+        <span class="deco deco-3">➖</span>
+        <span class="deco deco-4">🔢</span>
+        <span class="deco deco-5">➗</span>
+        <span class="deco deco-6">🧮</span>
+        <span class="deco deco-7">⭐</span>
+        <span class="deco deco-8">7</span>
+        <span class="deco deco-9">3</span>
+        <span class="deco deco-10">=</span>
+        <span class="deco deco-11">9</span>
+        <span class="deco deco-12">📐</span>
+    </div>
+
     <div id="app">
         <!-- Start Screen -->
         <div id="start-screen" class="screen active">
-            <h1>100칸 수학</h1>
-            <p class="subtitle">빠르고 정확하게 빈칸을 채워보세요!</p>
-            
+            <div class="title-wrap">
+                <span class="title-emoji">🧮</span>
+                <h1>100칸 수학</h1>
+                <span class="title-emoji">✨</span>
+            </div>
+            <p class="subtitle">빠르고 정확하게 빈칸을 채워 보아요!</p>
+
             <div class="settings">
                 <div class="setting-group">
-                    <label>칸수 선택</label>
+                    <label><span class="label-icon">📏</span> 칸수 선택</label>
                     <div class="radio-group" id="size-options">
                         <input type="radio" id="s10" name="size" value="10" checked>
                         <label for="s10">10칸 (2x5)</label>
@@ -29,23 +49,23 @@
                         <label for="s100">100칸 (10x10)</label>
                     </div>
                 </div>
-                
+
                 <div class="setting-group">
-                    <label>연산 선택</label>
+                    <label><span class="label-icon">🎯</span> 연산 선택</label>
                     <div class="radio-group" id="op-options">
                         <input type="radio" id="op-add" name="operator" value="+" checked>
-                        <label for="op-add">덧셈 (+)</label>
+                        <label for="op-add">➕ 덧셈</label>
                         <input type="radio" id="op-sub" name="operator" value="-">
-                        <label for="op-sub">뺄셈 (-)</label>
+                        <label for="op-sub">➖ 뺄셈</label>
                         <input type="radio" id="op-mul" name="operator" value="x">
-                        <label for="op-mul">곱셈 (x)</label>
+                        <label for="op-mul">✖️ 곱셈</label>
                     </div>
                 </div>
             </div>
 
             <div class="actions">
-                <button id="start-btn" class="primary-btn">게임 시작</button>
-                <button id="records-btn" class="secondary-btn">내 기록 보기</button>
+                <button id="start-btn" class="primary-btn">🚀 게임 시작</button>
+                <button id="records-btn" class="secondary-btn">📊 내 기록 보기</button>
             </div>
         </div>
 
@@ -60,7 +80,7 @@
                     <button id="giveup-btn" class="danger-btn">포기</button>
                 </div>
             </div>
-            
+
             <div class="board-container">
                 <div id="board" class="board"></div>
             </div>
@@ -70,8 +90,8 @@
         <div id="records-modal" class="modal">
             <div class="modal-content">
                 <span class="close-btn" id="close-records">&times;</span>
-                <h2>내 최고 기록 및 성장 추이</h2>
-                
+                <h2>🏆 내 최고 기록 & 성장 일기</h2>
+
                 <div class="record-filter">
                     <select id="record-mode-select">
                         <option value="10_+">10칸 덧셈 (+)</option>
@@ -85,11 +105,11 @@
                         <option value="100_x">100칸 곱셈 (x)</option>
                     </select>
                 </div>
-                
+
                 <div class="best-score" id="best-score-display">
-                    최고 기록: <span id="best-time">기록 없음</span>
+                    <span class="trophy">🥇</span> 최고 기록: <span id="best-time">기록 없음</span>
                 </div>
-                
+
                 <div class="chart-container">
                     <canvas id="recordChart"></canvas>
                 </div>
@@ -99,12 +119,13 @@
         <!-- Result Modal -->
         <div id="result-modal" class="modal">
             <div class="modal-content result-content">
-                <h2>완료!</h2>
+                <div class="celebrate">🎉</div>
+                <h2>참 잘했어요!</h2>
                 <div class="result-time" id="final-time">00:00.000</div>
-                <p id="result-message">수고하셨습니다. 계속해서 연습해보세요!</p>
+                <p id="result-message">수고했어요! 조금씩 더 빨라질 수 있어요. 💪</p>
                 <div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
-                    <button id="retry-btn" class="primary-btn">다시 하기</button>
-                    <button id="home-btn" class="secondary-btn">처음으로</button>
+                    <button id="retry-btn" class="primary-btn">🔁 다시 하기</button>
+                    <button id="home-btn" class="secondary-btn">🏠 처음으로</button>
                 </div>
             </div>
         </div>

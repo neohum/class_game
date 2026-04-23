@@ -14,8 +14,8 @@
     --cell-hover: #ffffff;
     --cell-active: #ffeaa7;
     --cell-active-border: #fdcb6e;
-    --cell-found: rgba(255, 255, 255, 0); /* Make transparent or disabled */
-    
+    --cell-found: rgba(255, 255, 255, 0);
+
     --success-color: #00b894;
     --error-color: #d63031;
 }
@@ -38,7 +38,6 @@ body {
     overflow-x: hidden;
 }
 
-/* Base Glassmorphism utilities */
 .glass {
     background: var(--card-bg);
     backdrop-filter: blur(12px);
@@ -56,7 +55,6 @@ body {
     gap: 1.5rem;
 }
 
-/* Header */
 .game-header {
     display: flex;
     justify-content: space-between;
@@ -102,7 +100,6 @@ body {
     margin: 0 0.2rem;
 }
 
-/* Buttons */
 .btn {
     padding: 0.6rem 1.2rem;
     border: none;
@@ -136,7 +133,6 @@ body {
     transform: translateY(-2px);
 }
 
-/* Main Layout */
 .game-content {
     display: grid;
     grid-template-columns: 1fr 350px;
@@ -144,7 +140,6 @@ body {
     align-items: stretch;
 }
 
-/* Board Section */
 .board-section {
     position: relative;
     padding: 2rem;
@@ -166,26 +161,25 @@ body {
     max-width: 500px;
 }
 
-/* Dynamic Grid Classes */
 .grid-5x5 {
     grid-template-columns: repeat(5, 1fr);
     grid-template-rows: repeat(5, 1fr);
 }
+
 .grid-7x7 {
     grid-template-columns: repeat(7, 1fr);
     grid-template-rows: repeat(7, 1fr);
 }
+
 .grid-10x10 {
     grid-template-columns: repeat(10, 1fr);
     grid-template-rows: repeat(10, 1fr);
 }
 
-/* Visibility */
 .hidden {
     display: none !important;
 }
 
-/* Menu Screen */
 .menu-container {
     width: 100%;
     max-width: 600px;
@@ -274,6 +268,10 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.grid-container.hide-cell-numbers .grid-cell::before {
+    display: none;
+}
+
 .grid-cell:hover:not(.found):not(.active) {
     transform: scale(1.1);
     background: var(--cell-hover);
@@ -298,7 +296,6 @@ body {
     transition: all 0.4s ease;
 }
 
-/* Animations for cell interactions */
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     20%, 60% { transform: translateX(-5px); }
@@ -323,8 +320,6 @@ body {
     color: white;
 }
 
-
-/* Overlay */
 .overlay {
     position: absolute;
     top: 0;
@@ -355,7 +350,6 @@ body {
     pointer-events: none;
 }
 
-/* Info Section */
 .info-section {
     display: flex;
     flex-direction: column;
@@ -383,7 +377,6 @@ body {
     display: inline-block;
 }
 
-/* Selection Panel */
 .current-selection-panel {
     flex-grow: 0;
 }
@@ -410,7 +403,6 @@ body {
     letter-spacing: 0;
 }
 
-/* Found Words Panel */
 .found-words-panel {
     height: 350px;
     overflow: hidden;
@@ -427,14 +419,15 @@ body {
     padding-right: 0.5rem;
 }
 
-/* Custom Scrollbar */
 .words-list::-webkit-scrollbar {
     width: 6px;
 }
+
 .words-list::-webkit-scrollbar-track {
     background: rgba(0,0,0,0.05);
     border-radius: 10px;
 }
+
 .words-list::-webkit-scrollbar-thumb {
     background: var(--primary-color);
     border-radius: 10px;
@@ -467,27 +460,26 @@ body {
     line-height: 1.4;
 }
 
-/* Responsive */
 @media (max-width: 850px) {
     .game-content {
         grid-template-columns: 1fr;
     }
-    
+
     .grid-container {
         max-width: 100%;
         gap: 4px;
     }
-    
+
     .grid-cell {
         font-size: 1.2rem;
     }
-    
+
     .game-header {
         flex-direction: column;
         gap: 1rem;
         text-align: center;
     }
-    
+
     .game-controls {
         flex-wrap: wrap;
         justify-content: center;

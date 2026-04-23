@@ -9,12 +9,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Menu Screen -->
     <div id="menu-screen" class="menu-container">
         <div class="menu-card glass">
             <h1>단어 찾기</h1>
             <p>난이도를 선택하세요!</p>
-            
+
             <div class="level-buttons">
                 <button class="btn btn-level" data-level="1">1단계 (5x5)</button>
                 <button class="btn btn-level" data-level="2">2단계 (7x7)</button>
@@ -25,9 +24,7 @@
         </div>
     </div>
 
-    <!-- Main Game Area -->
     <div id="game-screen" class="app-container hidden">
-        <!-- Header / Controls -->
         <header class="game-header">
             <div class="logo">
                 <h1>단어 찾기</h1>
@@ -41,41 +38,29 @@
         </header>
 
         <main class="game-content">
-            <!-- Left: Grid -->
             <section class="board-section">
-                <div id="game-board" class="grid-container">
-                    <!-- JavaScript will generate cells here -->
-                </div>
-                
-                <!-- Pause overlay -->
+                <div id="game-board" class="grid-container"></div>
+
                 <div id="pause-overlay" class="overlay hidden">
                     <h2>일시 정지</h2>
                     <p>게임이 잠시 중단되었습니다.</p>
                     <button id="btn-resume" class="btn primary">계속 하기</button>
                     <button id="btn-pause-back-menu" class="btn secondary" style="margin-top: 10px;">이전 화면</button>
                 </div>
-                
-                <!-- Complete overlay -->
+
                 <div id="complete-overlay" class="overlay hidden" style="background: rgba(255, 255, 255, 0.95);">
                     <h2 style="color: #6c5ce7; font-size: 3rem; margin-bottom: 0;">🎉 완료! 🎉</h2>
                     <p style="font-size: 1.2rem; margin-top: 10px; margin-bottom: 20px;">더 이상 조합할 수 있는 기본 단어가 없습니다!</p>
                     <button id="btn-complete-back-menu" class="btn primary" style="font-size: 1.2rem; padding: 10px 30px;">메뉴로 돌아가기</button>
                 </div>
-
-
             </section>
 
-            <!-- Right: Info Panel -->
             <section class="info-section">
-                <!-- Found Words Log -->
                 <div class="panel found-words-panel">
                     <h3>찾은 단어 뜻 (<span id="found-count">0</span>)</h3>
-                    <div id="found-words-list" class="words-list">
-                        <!-- Found words will appear here -->
-                    </div>
+                    <div id="found-words-list" class="words-list"></div>
                 </div>
 
-                <!-- Current Selection -->
                 <div class="panel current-selection-panel">
                     <h3>현재 선택한 글자</h3>
                     <div id="current-selection-display" class="selection-display">
@@ -89,7 +74,7 @@
             </section>
         </main>
     </div>
-    
+
     <script src="script.js"></script>
 </body>
 </html>

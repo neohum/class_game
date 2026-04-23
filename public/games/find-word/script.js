@@ -9,21 +9,17 @@ let currentWordsCount = 3;
 
 let selectedIndices = [];
 
-// Load dynamic dictionary immediately
 window.addEventListener('DOMContentLoaded', async () => {
     try {
         const res = await fetch('dictionary.json');
         dictionary = await res.json();
-        console.log("Dictionary loaded:", dictionary.length, "words");
-    } catch(e) {
-        console.error("Failed to load dictionary.json. Please ensure it exists and server is running.", e);
-        // Fallback dummy just in case
-        dictionary = [{ word: "테스트", meaning: "사전 로드 실패용 단어" }];
+        console.log('Dictionary loaded:', dictionary.length, 'words');
+    } catch (e) {
+        console.error('Failed to load dictionary.json. Please ensure it exists and server is running.', e);
+        dictionary = [{ word: '테스트', meaning: '사전 로드 실패용 단어' }];
     }
 });
 
-
-// DOM Elements
 const menuScreen = document.getElementById('menu-screen');
 const gameScreen = document.getElementById('game-screen');
 const boardEl = document.getElementById('game-board');
@@ -45,48 +41,52 @@ const pauseOverlay = document.getElementById('pause-overlay');
 const completeOverlay = document.getElementById('complete-overlay');
 const btnCompleteBackMenu = document.getElementById('btn-complete-back-menu');
 
-// Stage definitions
 const levelConfig = {
     1: { cells: 25, words: 3, gridClass: 'grid-5x5' },
     2: { cells: 49, words: 6, gridClass: 'grid-7x7' },
     3: { cells: 100, words: 12, gridClass: 'grid-10x10' }
 };
 
-// Start Level from Menu
 btnLevelSelects.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        currentLevel = parseInt(e.target.dataset.level);
+    btn.addEventListener('click', e => {
+        currentLevel = parseInt(e.currentTarget.dataset.level, 10);
         startGame(currentLevel);
     });
 });
 
-// Go Back to Menu
 function showMenu() {
     gameScreen.classList.add('hidden');
     menuScreen.classList.remove('hidden');
     isPaused = false;
     pauseOverlay.classList.add('hidden');
-    if (completeOverlay) completeOverlay.classList.add('hidden');
+    if (completeOverlay) {
+        completeOverlay.classList.add('hidden');
+    }
 }
 
 btnBackMenu.addEventListener('click', showMenu);
 btnPauseBackMenu.addEventListener('click', showMenu);
-if (btnCompleteBackMenu) btnCompleteBackMenu.addEventListener('click', showMenu);
+if (btnCompleteBackMenu) {
+    btnCompleteBackMenu.addEventListener('click', showMenu);
+}
 
-if (btnClearSelection) btnClearSelection.addEventListener('click', clearSelection);
-if (btnCheckWord) btnCheckWord.addEventListener('click', checkWordValidity);
+if (btnClearSelection) {
+    btnClearSelection.addEventListener('click', clearSelection);
+}
+if (btnCheckWord) {
+    btnCheckWord.addEventListener('click', checkWordValidity);
+}
 
 function startGame(level) {
     const config = levelConfig[level];
     currentCellsCount = config.cells;
     currentWordsCount = config.words;
 
-    // Toggle screens
     menuScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
 
-    // Update board class
     boardEl.className = `grid-container ${config.gridClass}`;
+    boardEl.classList.toggle('hide-cell-numbers', level === 3);
 
     initGame();
 }
@@ -97,32 +97,34 @@ function initGame() {
     gridLetters = new Array(currentCellsCount).fill('');
 
     updatePauseUI();
+    if (completeOverlay) {
+        completeOverlay.classList.add('hidden');
+    }
     foundWordsListEl.innerHTML = '';
     foundCountEl.innerText = '0';
     updateSelectionDisplay();
 
-    // Pick words to guarantee *some* words are hidden, but ANY word works now!
     const shuffledDict = [...dictionary].sort(() => 0.5 - Math.random());
     const hiddenWordsToSeed = shuffledDict.slice(0, currentWordsCount);
 
-    let lettersToHide = [];
+    const lettersToHide = [];
     hiddenWordsToSeed.forEach(item => {
-        for (let char of item.word) {
+        for (const char of item.word) {
             lettersToHide.push(char);
         }
     });
 
-    let availableSlots = Array.from({length: currentCellsCount}, (_, i) => i);
+    const availableSlots = Array.from({ length: currentCellsCount }, (_, i) => i);
     availableSlots.sort(() => 0.5 - Math.random());
 
-    for (let char of lettersToHide) {
-        if(availableSlots.length > 0) {
-            let slot = availableSlots.pop();
+    for (const char of lettersToHide) {
+        if (availableSlots.length > 0) {
+            const slot = availableSlots.pop();
             gridLetters[slot] = char;
         }
     }
 
-    for (let i = 0; i < gridLetters.length; i++) {
+    for (let i = 0; i < gridLetters.length; i += 1) {
         if (!gridLetters[i]) {
             const randomChar = fillerChars[Math.floor(Math.random() * fillerChars.length)];
             gridLetters[i] = randomChar;
@@ -134,7 +136,7 @@ function initGame() {
 
 function renderBoard() {
     boardEl.innerHTML = '';
-    for (let i = 0; i < gridLetters.length; i++) {
+    for (let i = 0; i < gridLetters.length; i += 1) {
         const cell = document.createElement('div');
         cell.classList.add('grid-cell');
         cell.dataset.index = i;
@@ -158,10 +160,14 @@ function clearSelection() {
 }
 
 function handleCellClick(index) {
-    if (isPaused) return;
-    
+    if (isPaused) {
+        return;
+    }
+
     const cellEl = boardEl.children[index];
-    if (cellEl.classList.contains('found')) return;
+    if (cellEl.classList.contains('found')) {
+        return;
+    }
 
     if (selectedIndices.includes(index)) {
         if (selectedIndices[selectedIndices.length - 1] === index) {
@@ -178,14 +184,15 @@ function handleCellClick(index) {
 }
 
 async function checkWordValidity() {
-    if (selectedIndices.length < 1) return;
-    if (isPaused) return;
-    
+    if (selectedIndices.length < 1 || isPaused) {
+        return;
+    }
+
     const sequenceStr = selectedIndices.map(idx => gridLetters[idx]).join('');
-    
+
     btnCheckWord.innerText = '검색 중...';
     btnCheckWord.disabled = true;
-    
+
     try {
         const localMatch = dictionary.find(item => item.word === sequenceStr);
         if (localMatch) {
@@ -198,43 +205,40 @@ async function checkWordValidity() {
         let foundMeaning = null;
         let isValid = false;
 
-        // 1. Try Wikipedia REST API for high-quality rich text extract
         try {
             const wikiUrl = `https://ko.wikipedia.org/api/rest_v1/page/summary/${encodedWord}`;
             const wikiRes = await fetch(wikiUrl);
             if (wikiRes.status === 200) {
                 const wikiData = await wikiRes.json();
-                if (wikiData.extract && wikiData.extract.length > 5 && !wikiData.extract.includes("may refer to")) {
+                if (wikiData.extract && wikiData.extract.length > 5 && !wikiData.extract.includes('may refer to')) {
                     foundMeaning = wikiData.extract.substring(0, 150);
                     isValid = true;
                 }
             }
-        } catch(wikiErr) {
-            console.log("Wikipedia missed, falling back to Wiktionary");
+        } catch (wikiErr) {
+            console.log('Wikipedia missed, falling back to Wiktionary');
         }
 
-        // 2. Fallback to Wiktionary OpenSearch (Verifies word existence even if extract fails)
         if (!isValid) {
             const dictUrl = `https://ko.wiktionary.org/w/api.php?action=opensearch&search=${encodedWord}&limit=1&format=json&origin=*`;
             const dictRes = await fetch(dictUrl);
             const dictData = await dictRes.json();
-            
+
             if (dictData && dictData[1] && dictData[1].length > 0 && dictData[1][0] === sequenceStr) {
                 isValid = true;
-                foundMeaning = "국어사전에 등재된 유효한 한국어 단어입니다.";
+                foundMeaning = '국어사전에 등재된 유효한 한국어 단어입니다.';
             }
         }
-        
+
         resetCheckBtn();
 
         if (isValid) {
-            handleWordFound({ word: sequenceStr, meaning: foundMeaning + " (오픈백과)" });
+            handleWordFound({ word: sequenceStr, meaning: `${foundMeaning} (오픈백과)` });
         } else {
             showError();
         }
-
     } catch (e) {
-        console.error("API Error", e);
+        console.error('API Error', e);
         resetCheckBtn();
         showError();
     }
@@ -248,7 +252,9 @@ function resetCheckBtn() {
 function showError() {
     selectedIndices.forEach(idx => {
         const el = boardEl.children[idx];
-        if (el) el.classList.add('error');
+        if (el) {
+            el.classList.add('error');
+        }
     });
 
     setTimeout(() => {
@@ -261,7 +267,7 @@ function handleWordFound(wordObj) {
         const el = boardEl.children[idx];
         el.classList.remove('active');
         el.classList.add('success');
-        
+
         setTimeout(() => {
             el.classList.remove('success');
             el.classList.add('found');
@@ -271,14 +277,13 @@ function handleWordFound(wordObj) {
     selectedIndices = [];
     updateSelectionDisplay();
     addWordToLog(wordObj);
-    
-    // Evaluate if game is complete after animation finishes
+
     setTimeout(checkGameComplete, 550);
 }
 
 function checkGameComplete() {
     const remainingChars = [];
-    for (let i = 0; i < gridLetters.length; i++) {
+    for (let i = 0; i < gridLetters.length; i += 1) {
         const el = boardEl.children[i];
         if (!el.classList.contains('found')) {
             remainingChars.push(gridLetters[i]);
@@ -291,22 +296,23 @@ function checkGameComplete() {
     }
 
     const remainFreq = {};
-    for (let char of remainingChars) {
+    for (const char of remainingChars) {
         remainFreq[char] = (remainFreq[char] || 0) + 1;
     }
 
-    // Check if ANY base dictionary word can still be formed
-    for (let i = 0; i < dictionary.length; i++) {
+    for (let i = 0; i < dictionary.length; i += 1) {
         const word = dictionary[i].word;
-        if (!word) continue;
+        if (!word) {
+            continue;
+        }
 
         const wordFreq = {};
-        for (let char of word) {
+        for (const char of word) {
             wordFreq[char] = (wordFreq[char] || 0) + 1;
         }
 
         let canForm = true;
-        for (let char in wordFreq) {
+        for (const char in wordFreq) {
             if (!remainFreq[char] || remainFreq[char] < wordFreq[char]) {
                 canForm = false;
                 break;
@@ -314,11 +320,10 @@ function checkGameComplete() {
         }
 
         if (canForm) {
-            return; // Game not complete, valid subset exists
+            return;
         }
     }
 
-    // Completely exhausted
     completeOverlay.classList.remove('hidden');
 }
 
@@ -339,9 +344,9 @@ function addWordToLog(wordObj) {
         <div class="word-meaning">${wordObj.meaning}</div>
     `;
     foundWordsListEl.insertBefore(card, foundWordsListEl.firstChild);
-    
-    const currentFoundVal = parseInt(foundCountEl.innerText) || 0;
-    foundCountEl.innerText = currentFoundVal + 1;
+
+    const currentFoundVal = parseInt(foundCountEl.innerText, 10) || 0;
+    foundCountEl.innerText = `${currentFoundVal + 1}`;
 }
 
 function togglePause() {

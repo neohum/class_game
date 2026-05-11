@@ -87,23 +87,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 correctCount: 0,
                 inputElements: [],
                 finishTime: null,
+                startTime: performance.now(),
                 element: null,
                 statusElement: null,
                 timerElement: null
             };
             playersData.push(pData);
             
-            const playerArea = createPlayerArea(pData, cols, rows, operator);
+            const playerArea = createPlayerAreaSkeleton(pData);
             container.appendChild(playerArea);
             pData.element = playerArea;
             
-            // Focus first input of each player initially
-            if (pData.inputElements.length > 0) {
-                pData.inputElements[0].classList.add('active-cell');
-                if (playersCount === 1) {
-                    pData.inputElements[0].focus();
-                }
-            }
+            initPlayerBoard(pData);
         }
         
         startScreen.classList.remove('active');
@@ -117,11 +112,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTimer() {
-        const elapsed = performance.now() - startTime;
-        const timeStr = formatTime(elapsed);
+        const now = performance.now();
         playersData.forEach(p => {
             if (p.finishTime === null && p.timerElement) {
-                p.timerElement.textContent = timeStr;
+                const elapsed = now - p.startTime;
+                p.timerElement.textContent = formatTime(elapsed);
             }
         });
     }
@@ -151,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return arr.slice(0, count);
     }
 
-    function createPlayerArea(pData, cols, rows, op) {
+    function createPlayerAreaSkeleton(pData) {
         const area = document.createElement('div');
         area.className = 'player-area';
         
@@ -185,6 +180,76 @@ document.addEventListener('DOMContentLoaded', () => {
         // Board Container
         const boardContainer = document.createElement('div');
         boardContainer.className = 'board-container';
+        area.appendChild(boardContainer);
+        
+        // Keyboard Section
+        const keyboardHtml = `
+            <div class="keyboard-section">
+                <div class="virtual-keyboard">
+                    <button class="v-key" data-key="1">1</button>
+                    <button class="v-key" data-key="2">2</button>
+                    <button class="v-key" data-key="3">3</button>
+                    <button class="v-key" data-key="4">4</button>
+                    <button class="v-key" data-key="5">5</button>
+                    <button class="v-key" data-key="6">6</button>
+                    <button class="v-key" data-key="7">7</button>
+                    <button class="v-key" data-key="8">8</button>
+                    <button class="v-key" data-key="9">9</button>
+                    <button class="v-key action-key" data-key="clear">C</button>
+                    <button class="v-key" data-key="0">0</button>
+                    <button class="v-key action-key" data-key="delete">⌫</button>
+                </div>
+                <div class="side-controls">
+                </div>
+            </div>
+        `;
+        area.insertAdjacentHTML('beforeend', keyboardHtml);
+        
+        const virtualKeyboard = area.querySelector('.virtual-keyboard');
+        virtualKeyboard.addEventListener('pointerdown', (e) => {
+            const keyBtn = e.target.closest('.v-key');
+            if (!keyBtn) return;
+            
+            e.preventDefault();
+            
+            const activeInput = area.querySelector('.active-cell');
+            if (!activeInput || activeInput.disabled) return;
+            
+            const key = keyBtn.dataset.key;
+            
+            if (key === 'clear') {
+                activeInput.value = '';
+            } else if (key === 'delete') {
+                activeInput.value = activeInput.value.slice(0, -1);
+            } else {
+                if (activeInput.value.length < 4) {
+                    activeInput.value += key;
+                }
+            }
+            
+            activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        
+        return area;
+    }
+
+    function initPlayerBoard(pData) {
+        let cols, rows;
+        if (gameSize === 10) { cols = 5; rows = 2; }
+        else if (gameSize === 25) { cols = 5; rows = 5; }
+        else if (gameSize === 100) { cols = 10; rows = 10; }
+        const op = operator;
+
+        const area = pData.element;
+        const boardContainer = area.querySelector('.board-container');
+        boardContainer.innerHTML = '';
+        
+        pData.correctCount = 0;
+        pData.finishTime = null;
+        pData.startTime = performance.now();
+        pData.inputElements = [];
+        pData.statusElement.textContent = '0%';
+        area.classList.remove('finished');
         
         const board = document.createElement('div');
         board.className = 'board';
@@ -193,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let topHeaders = generateHeaders(cols, 0);
         let leftHeaders = [];
         if (op === '-') leftHeaders = generateHeaders(rows, 10);
-        else if (op === 'x') leftHeaders = generateHeaders(rows, 0);
         else leftHeaders = generateHeaders(rows, 0);
         
         // Corner Cell
@@ -250,61 +314,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         boardContainer.appendChild(board);
-        area.appendChild(boardContainer);
         
-        // Keyboard Section
-        const keyboardHtml = `
-            <div class="keyboard-section">
-                <div class="virtual-keyboard">
-                    <button class="v-key" data-key="1">1</button>
-                    <button class="v-key" data-key="2">2</button>
-                    <button class="v-key" data-key="3">3</button>
-                    <button class="v-key" data-key="4">4</button>
-                    <button class="v-key" data-key="5">5</button>
-                    <button class="v-key" data-key="6">6</button>
-                    <button class="v-key" data-key="7">7</button>
-                    <button class="v-key" data-key="8">8</button>
-                    <button class="v-key" data-key="9">9</button>
-                    <button class="v-key action-key" data-key="clear">C</button>
-                    <button class="v-key" data-key="0">0</button>
-                    <button class="v-key action-key" data-key="delete">⌫</button>
-                </div>
-                <div class="side-controls">
-                    <button class="danger-btn player-giveup-btn">포기</button>
-                </div>
-            </div>
-        `;
-        area.insertAdjacentHTML('beforeend', keyboardHtml);
+        // Reset controls
+        const sideControls = area.querySelector('.side-controls');
+        sideControls.innerHTML = '<button class="danger-btn player-giveup-btn">포기</button>';
+        sideControls.querySelector('.player-giveup-btn').addEventListener('click', showStartScreen);
         
-        const virtualKeyboard = area.querySelector('.virtual-keyboard');
-        virtualKeyboard.addEventListener('pointerdown', (e) => {
-            const keyBtn = e.target.closest('.v-key');
-            if (!keyBtn) return;
-            
-            e.preventDefault();
-            
-            const activeInput = area.querySelector('.active-cell');
-            if (!activeInput || activeInput.disabled) return;
-            
-            const key = keyBtn.dataset.key;
-            
-            if (key === 'clear') {
-                activeInput.value = '';
-            } else if (key === 'delete') {
-                activeInput.value = activeInput.value.slice(0, -1);
-            } else {
-                if (activeInput.value.length < 4) {
-                    activeInput.value += key;
-                }
+        // Focus first input
+        if (pData.inputElements.length > 0) {
+            pData.inputElements[0].classList.add('active-cell');
+            if (playersCount === 1) {
+                pData.inputElements[0].focus();
             }
-            
-            activeInput.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-
-        const giveupBtn = area.querySelector('.player-giveup-btn');
-        giveupBtn.addEventListener('click', showStartScreen);
-        
-        return area;
+        }
     }
 
     function handleInput(e, pData) {
@@ -367,38 +389,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function playerFinished(pData) {
-        pData.finishTime = performance.now() - startTime;
+        pData.finishTime = performance.now() - pData.startTime;
         pData.statusElement.textContent = "완료";
         pData.element.classList.add('finished');
         
-        finishedPlayers++;
-        
-        if (finishedPlayers >= playersCount) {
+        if (playersCount === 1) {
+            finishedPlayers++;
             finishGame();
+        } else {
+            const sideControls = pData.element.querySelector('.side-controls');
+            sideControls.innerHTML = '<button class="primary-btn player-restart-btn" style="padding: 10px 18px; border-radius: 12px; font-size: 1rem;">다시 시작</button>';
+            sideControls.querySelector('.player-restart-btn').addEventListener('click', () => {
+                initPlayerBoard(pData);
+            });
         }
     }
 
     function finishGame() {
         clearInterval(timerInterval);
         
-        playersData.sort((a, b) => a.finishTime - b.finishTime);
-        
         if (playersCount === 1) {
             saveRecord(gameSize, operator, playersData[0].finishTime);
-        }
-        
-        const resultMessage = document.getElementById('result-message');
-        if (playersCount === 1) {
             finalTimeDisplay.textContent = formatTime(playersData[0].finishTime);
-            resultMessage.textContent = '수고했어요! 조금씩 더 빨라질 수 있어요. 💪';
-        } else {
-            finalTimeDisplay.textContent = `1등: Player ${playersData[0].id + 1}`;
-            resultMessage.textContent = `기록: ${formatTime(playersData[0].finishTime)}`;
+            document.getElementById('result-message').textContent = '수고했어요! 조금씩 더 빨라질 수 있어요. 💪';
+            
+            setTimeout(() => {
+                resultModal.classList.add('active');
+            }, 400);
         }
-        
-        setTimeout(() => {
-            resultModal.classList.add('active');
-        }, 400);
     }
     
     // --- Local Storage Management ---

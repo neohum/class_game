@@ -61,6 +61,18 @@
                         <label for="op-mul">✖️ 곱셈</label>
                     </div>
                 </div>
+
+                <div class="setting-group">
+                    <label><span class="label-icon">👥</span> 인원수 선택</label>
+                    <div class="radio-group" id="players-options">
+                        <input type="radio" id="p1" name="players" value="1" checked>
+                        <label for="p1">1인용</label>
+                        <input type="radio" id="p2" name="players" value="2">
+                        <label for="p2">2인용</label>
+                        <input type="radio" id="p3" name="players" value="3">
+                        <label for="p3" id="label-p3">3인용</label>
+                    </div>
+                </div>
             </div>
 
             <div class="actions">
@@ -71,18 +83,14 @@
 
         <!-- Game Screen -->
         <div id="game-screen" class="screen">
-            <div class="game-header">
+            <div class="game-header" style="justify-content: center;">
                 <div class="info">
                     <span id="game-mode-label">100칸 (+)</span>
                 </div>
-                <div class="timer" id="timer">00:00.000</div>
-                <div class="controls">
-                    <button id="giveup-btn" class="danger-btn">포기</button>
-                </div>
             </div>
 
-            <div class="board-container">
-                <div id="board" class="board"></div>
+            <div id="players-container" class="players-container">
+                <!-- Dynamically generated player areas will go here -->
             </div>
         </div>
 

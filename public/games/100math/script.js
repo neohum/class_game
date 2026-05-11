@@ -2,36 +2,58 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const startScreen = document.getElementById('start-screen');
     const gameScreen = document.getElementById('game-screen');
-    const board = document.getElementById('board');
-    const timerDisplay = document.getElementById('timer');
     const gameModeLabel = document.getElementById('game-mode-label');
     const resultModal = document.getElementById('result-modal');
     const recordsModal = document.getElementById('records-modal');
     const finalTimeDisplay = document.getElementById('final-time');
     
+    // Settings Elements
+    const sizeRadios = document.querySelectorAll('input[name="size"]');
+    const p3Radio = document.getElementById('p3');
+    const p3Label = document.getElementById('label-p3');
+    const p2Radio = document.getElementById('p2');
+    
     // Settings
     let gameSize = 10;
     let operator = '+';
+    let playersCount = 1;
     
     // Game State
     let timerInterval = null;
     let startTime = 0;
     let totalCells = 0;
-    let correctCount = 0;
-    let inputElements = [];
+    let playersData = [];
+    let finishedPlayers = 0;
     
     // Chart instance
     let recordChart = null;
 
     // Initialize Event Listeners
     document.getElementById('start-btn').addEventListener('click', startGame);
-    document.getElementById('giveup-btn').addEventListener('click', showStartScreen);
     document.getElementById('retry-btn').addEventListener('click', startGame);
     document.getElementById('home-btn').addEventListener('click', showStartScreen);
     
     document.getElementById('records-btn').addEventListener('click', showRecords);
     document.getElementById('close-records').addEventListener('click', () => recordsModal.classList.remove('active'));
     document.getElementById('record-mode-select').addEventListener('change', updateRecordDisplay);
+
+    // Disable 3-player for 100 cells
+    sizeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === '100') {
+                p3Radio.disabled = true;
+                p3Label.style.opacity = '0.5';
+                p3Label.style.cursor = 'not-allowed';
+                if (p3Radio.checked) {
+                    p2Radio.checked = true;
+                }
+            } else {
+                p3Radio.disabled = false;
+                p3Label.style.opacity = '1';
+                p3Label.style.cursor = 'pointer';
+            }
+        });
+    });
 
     function showStartScreen() {
         clearInterval(timerInterval);
@@ -43,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGame() {
         gameSize = parseInt(document.querySelector('input[name="size"]:checked').value);
         operator = document.querySelector('input[name="operator"]:checked').value;
+        playersCount = parseInt(document.querySelector('input[name="players"]:checked').value);
         
         let cols, rows;
         if (gameSize === 10) { cols = 5; rows = 2; }
@@ -50,32 +73,57 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (gameSize === 100) { cols = 10; rows = 10; }
         
         totalCells = cols * rows;
-        correctCount = 0;
-        inputElements = [];
+        playersData = [];
+        finishedPlayers = 0;
         
-        gameModeLabel.textContent = `${gameSize}칸 (${operator})`;
+        gameModeLabel.textContent = `${gameSize}칸 (${operator}) - ${playersCount}인용`;
         
-        generateBoard(cols, rows, operator);
+        const container = document.getElementById('players-container');
+        container.innerHTML = '';
+        
+        for (let p = 0; p < playersCount; p++) {
+            const pData = {
+                id: p,
+                correctCount: 0,
+                inputElements: [],
+                finishTime: null,
+                element: null,
+                statusElement: null,
+                timerElement: null
+            };
+            playersData.push(pData);
+            
+            const playerArea = createPlayerArea(pData, cols, rows, operator);
+            container.appendChild(playerArea);
+            pData.element = playerArea;
+            
+            // Focus first input of each player initially
+            if (pData.inputElements.length > 0) {
+                pData.inputElements[0].classList.add('active-cell');
+                if (playersCount === 1) {
+                    pData.inputElements[0].focus();
+                }
+            }
+        }
         
         startScreen.classList.remove('active');
         resultModal.classList.remove('active');
         gameScreen.classList.add('active');
         
         // Start Timer
-        timerDisplay.textContent = '00:00.000';
         startTime = performance.now();
         clearInterval(timerInterval);
         timerInterval = setInterval(updateTimer, 50);
-        
-        // Focus first input
-        if (inputElements.length > 0) {
-            inputElements[0].focus();
-        }
     }
 
     function updateTimer() {
         const elapsed = performance.now() - startTime;
-        timerDisplay.textContent = formatTime(elapsed);
+        const timeStr = formatTime(elapsed);
+        playersData.forEach(p => {
+            if (p.finishTime === null && p.timerElement) {
+                p.timerElement.textContent = timeStr;
+            }
+        });
     }
 
     function formatTime(ms) {
@@ -103,24 +151,50 @@ document.addEventListener('DOMContentLoaded', () => {
         return arr.slice(0, count);
     }
 
-    function generateBoard(cols, rows, op) {
-        board.innerHTML = '';
+    function createPlayerArea(pData, cols, rows, op) {
+        const area = document.createElement('div');
+        area.className = 'player-area';
+        
+        // Header
+        const header = document.createElement('div');
+        header.className = 'player-header';
+        
+        const name = document.createElement('div');
+        name.className = 'player-name';
+        name.textContent = `Player ${pData.id + 1}`;
+        
+        const timerEl = document.createElement('div');
+        timerEl.className = 'player-timer';
+        timerEl.textContent = '00:00.000';
+        pData.timerElement = timerEl;
+        
+        const status = document.createElement('div');
+        status.className = 'player-status';
+        status.textContent = '0%';
+        pData.statusElement = status;
+        
+        const rightGroup = document.createElement('div');
+        rightGroup.className = 'player-header-right';
+        rightGroup.appendChild(timerEl);
+        rightGroup.appendChild(status);
+        
+        header.appendChild(name);
+        header.appendChild(rightGroup);
+        area.appendChild(header);
+        
+        // Board Container
+        const boardContainer = document.createElement('div');
+        boardContainer.className = 'board-container';
+        
+        const board = document.createElement('div');
+        board.className = 'board';
         board.style.gridTemplateColumns = `repeat(${cols + 1}, var(--cell-size))`;
         
-        // 가로축 헤더 (Top Headers). 항상 0~9
         let topHeaders = generateHeaders(cols, 0);
-        
-        // 세로축 헤더 (Left Headers).
         let leftHeaders = [];
-        if (op === '-') {
-            // 뺄셈인 경우 음수를 방지하기 위해 큰 수(10~19)에서 뺌
-            leftHeaders = generateHeaders(rows, 10);
-        } else if (op === 'x') {
-            // 곱셈인 경우 너무 쉬운 0을 제외하길 선호할 수도 있지만 일단 0~9 사용
-            leftHeaders = generateHeaders(rows, 0);
-        } else {
-            leftHeaders = generateHeaders(rows, 0);
-        }
+        if (op === '-') leftHeaders = generateHeaders(rows, 10);
+        else if (op === 'x') leftHeaders = generateHeaders(rows, 0);
+        else leftHeaders = generateHeaders(rows, 0);
         
         // Corner Cell
         const cornerCell = document.createElement('div');
@@ -150,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const input = document.createElement('input');
                 input.type = 'number';
                 
-                // Calculate correct answer
                 let answer = 0;
                 if (op === '+') answer = leftHeaders[i] + topHeaders[j];
                 else if (op === '-') answer = leftHeaders[i] - topHeaders[j];
@@ -158,17 +231,85 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 input.dataset.answer = answer;
                 
-                // Event listener on input to check instantly
-                input.addEventListener('input', handleInput);
+                input.addEventListener('input', (e) => handleInput(e, pData));
+                
+                input.addEventListener('pointerdown', (e) => {
+                    pData.inputElements.forEach(el => el.classList.remove('active-cell'));
+                    input.classList.add('active-cell');
+                });
+                
+                input.addEventListener('focus', () => {
+                    pData.inputElements.forEach(el => el.classList.remove('active-cell'));
+                    input.classList.add('active-cell');
+                });
                 
                 cell.appendChild(input);
                 board.appendChild(cell);
-                inputElements.push(input);
+                pData.inputElements.push(input);
             }
         }
+        
+        boardContainer.appendChild(board);
+        area.appendChild(boardContainer);
+        
+        // Keyboard Section
+        const keyboardHtml = `
+            <div class="keyboard-section">
+                <div class="virtual-keyboard">
+                    <button class="v-key" data-key="1">1</button>
+                    <button class="v-key" data-key="2">2</button>
+                    <button class="v-key" data-key="3">3</button>
+                    <button class="v-key" data-key="4">4</button>
+                    <button class="v-key" data-key="5">5</button>
+                    <button class="v-key" data-key="6">6</button>
+                    <button class="v-key" data-key="7">7</button>
+                    <button class="v-key" data-key="8">8</button>
+                    <button class="v-key" data-key="9">9</button>
+                    <button class="v-key action-key" data-key="clear">C</button>
+                    <button class="v-key" data-key="0">0</button>
+                    <button class="v-key action-key" data-key="delete">⌫</button>
+                </div>
+                <div class="side-controls">
+                    <button class="danger-btn player-giveup-btn">포기</button>
+                </div>
+            </div>
+        `;
+        area.insertAdjacentHTML('beforeend', keyboardHtml);
+        
+        const virtualKeyboard = area.querySelector('.virtual-keyboard');
+        virtualKeyboard.addEventListener('pointerdown', (e) => {
+            const keyBtn = e.target.closest('.v-key');
+            if (!keyBtn) return;
+            
+            e.preventDefault();
+            
+            const activeInput = area.querySelector('.active-cell');
+            if (!activeInput || activeInput.disabled) return;
+            
+            const key = keyBtn.dataset.key;
+            
+            if (key === 'clear') {
+                activeInput.value = '';
+            } else if (key === 'delete') {
+                activeInput.value = activeInput.value.slice(0, -1);
+            } else {
+                if (activeInput.value.length < 4) {
+                    activeInput.value += key;
+                }
+            }
+            
+            activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        const giveupBtn = area.querySelector('.player-giveup-btn');
+        giveupBtn.addEventListener('click', showStartScreen);
+        
+        return area;
     }
 
-    function handleInput(e) {
+    function handleInput(e, pData) {
+        if (pData.finishTime !== null) return;
+        
         const input = e.target;
         const valStr = input.value;
         if (valStr === '') return;
@@ -178,22 +319,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const answerStr = String(answer);
         
         if (val === answer) {
-            // Correct format instantly
-            input.classList.remove('error');
+            input.classList.remove('error', 'active-cell');
             input.classList.add('correct');
             input.disabled = true;
-            correctCount++;
+            pData.correctCount++;
             
-            if (correctCount >= totalCells) {
-                finishGame();
+            const percent = Math.floor((pData.correctCount / totalCells) * 100);
+            pData.statusElement.textContent = `${percent}%`;
+            
+            if (pData.correctCount >= totalCells) {
+                playerFinished(pData);
             } else {
-                focusNextInput(input);
+                focusNextInput(input, pData);
             }
         } else {
-            // Error checking - visually indicate only if length matches or exceeds answer
             if (valStr.length >= answerStr.length) {
                 input.classList.add('error');
-                // Auto-clear string after small delay for UX
                 setTimeout(() => {
                     if (!input.disabled) {
                         input.classList.remove('error');
@@ -206,30 +347,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function focusNextInput(currentInput) {
-        const currentIndex = inputElements.indexOf(currentInput);
+    function focusNextInput(currentInput, pData) {
+        const currentIndex = pData.inputElements.indexOf(currentInput);
         let nextIndex = currentIndex + 1;
         
         while (nextIndex !== currentIndex) {
-            if (nextIndex >= inputElements.length) {
-                nextIndex = 0; // Wrap around
+            if (nextIndex >= pData.inputElements.length) {
+                nextIndex = 0;
             }
-            if (!inputElements[nextIndex].disabled) {
-                inputElements[nextIndex].focus();
+            if (!pData.inputElements[nextIndex].disabled) {
+                pData.inputElements[nextIndex].classList.add('active-cell');
+                if (playersCount === 1) {
+                    pData.inputElements[nextIndex].focus();
+                }
                 return;
             }
             nextIndex++;
         }
     }
 
+    function playerFinished(pData) {
+        pData.finishTime = performance.now() - startTime;
+        pData.statusElement.textContent = "완료";
+        pData.element.classList.add('finished');
+        
+        finishedPlayers++;
+        
+        if (finishedPlayers >= playersCount) {
+            finishGame();
+        }
+    }
+
     function finishGame() {
         clearInterval(timerInterval);
-        const finalTimeMs = performance.now() - startTime;
-        const timeStr = formatTime(finalTimeMs);
         
-        finalTimeDisplay.textContent = timeStr;
+        playersData.sort((a, b) => a.finishTime - b.finishTime);
         
-        saveRecord(gameSize, operator, finalTimeMs);
+        if (playersCount === 1) {
+            saveRecord(gameSize, operator, playersData[0].finishTime);
+        }
+        
+        const resultMessage = document.getElementById('result-message');
+        if (playersCount === 1) {
+            finalTimeDisplay.textContent = formatTime(playersData[0].finishTime);
+            resultMessage.textContent = '수고했어요! 조금씩 더 빨라질 수 있어요. 💪';
+        } else {
+            finalTimeDisplay.textContent = `1등: Player ${playersData[0].id + 1}`;
+            resultMessage.textContent = `기록: ${formatTime(playersData[0].finishTime)}`;
+        }
         
         setTimeout(() => {
             resultModal.classList.add('active');

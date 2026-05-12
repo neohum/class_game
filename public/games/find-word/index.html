@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -15,64 +15,67 @@
             <p>난이도를 선택하세요!</p>
 
             <div class="level-buttons">
-                <button class="btn btn-level" data-level="1">1단계 (5x5)</button>
-                <button class="btn btn-level" data-level="2">2단계 (7x7)</button>
-                <button class="btn btn-level" data-level="3">3단계 (10x10)</button>
+                <button class="btn btn-level" data-level="1" data-players="2">1단계 (4x4) - 2인 대결</button>
+                <button class="btn btn-level" data-level="2" data-players="1">2단계 (5x5) - 1인용</button>
+                <button class="btn btn-level" data-level="3" data-players="1">3단계 (7x7) - 1인용</button>
+                <button class="btn btn-level" data-level="4" data-players="1">4단계 (10x10) - 1인용</button>
             </div>
 
             <a href="/" class="btn secondary btn-back-home" style="margin-top: 2rem; display: inline-block; text-decoration: none;">이전 화면으로 가기</a>
         </div>
     </div>
 
-    <div id="game-screen" class="app-container hidden">
-        <header class="game-header">
-            <div class="logo">
-                <h1>단어 찾기</h1>
-                <p>글자를 순서대로 눌러 단어를 완성하세요!</p>
+    <div id="game-screen" class="app-container hidden" style="max-width: 100%;">
+        <header class="game-header-global" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 1rem 2rem; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border-radius: 20px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;">
+            <div class="logo" style="display: flex; align-items: center; gap: 15px;">
+                <h1 style="margin: 0; color: #6c5ce7; font-size: 1.8rem; font-weight: 900;">단어 찾기</h1>
+                <p style="margin: 0; color: #636e72;">글자를 순서대로 눌러 단어를 완성하세요!</p>
             </div>
-            <div class="game-controls">
-                <button id="btn-pause" class="btn secondary">일시정지</button>
-                <button id="btn-new-game" class="btn primary">다시 시작</button>
-                <button id="btn-back-menu" class="btn secondary">이전 화면</button>
-            </div>
+            <button id="btn-back-menu" class="btn secondary">메뉴로 돌아가기</button>
         </header>
 
-        <main class="game-content">
-            <section class="board-section">
-                <div id="game-board" class="grid-container"></div>
+        <div id="players-container" style="display: flex; gap: 2rem; justify-content: center; width: 100%; flex-wrap: wrap;"></div>
 
-                <div id="pause-overlay" class="overlay hidden">
-                    <h2>일시 정지</h2>
-                    <p>게임이 잠시 중단되었습니다.</p>
-                    <button id="btn-resume" class="btn primary">계속 하기</button>
-                    <button id="btn-pause-back-menu" class="btn secondary" style="margin-top: 10px;">이전 화면</button>
-                </div>
-
-                <div id="complete-overlay" class="overlay hidden" style="background: rgba(255, 255, 255, 0.95);">
-                    <h2 style="color: #6c5ce7; font-size: 3rem; margin-bottom: 0;">🎉 완료! 🎉</h2>
-                    <p style="font-size: 1.2rem; margin-top: 10px; margin-bottom: 20px;">더 이상 조합할 수 있는 기본 단어가 없습니다!</p>
-                    <button id="btn-complete-back-menu" class="btn primary" style="font-size: 1.2rem; padding: 10px 30px;">메뉴로 돌아가기</button>
-                </div>
-            </section>
-
-            <section class="info-section">
-                <div class="panel found-words-panel">
-                    <h3>찾은 단어 뜻 (<span id="found-count">0</span>)</h3>
-                    <div id="found-words-list" class="words-list"></div>
-                </div>
-
-                <div class="panel current-selection-panel">
-                    <h3>현재 선택한 글자</h3>
-                    <div id="current-selection-display" class="selection-display">
-                        <span class="placeholder">글자를 클릭하세요</span>
+        <template id="player-template">
+            <main class="game-content player-zone">
+                <section class="board-section">
+                    <div class="game-board grid-container"></div>
+                    
+                    <div class="pause-overlay overlay hidden">
+                        <h2>일시 정지</h2>
+                        <button class="btn btn-resume primary">계속 하기</button>
                     </div>
-                    <div class="action-buttons" style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button id="btn-clear-selection" class="btn secondary" style="flex: 1;">선택 취소</button>
-                        <button id="btn-check-word" class="btn primary" style="flex: 2;">정답 확인</button>
+
+                    <div class="complete-overlay overlay hidden" style="background: rgba(255, 255, 255, 0.95);">
+                        <h2 style="color: #6c5ce7; font-size: 2.5rem; margin-bottom: 0;">🎉 완료! 🎉</h2>
+                        <p style="font-size: 1.1rem; margin-top: 10px; margin-bottom: 20px;">단어를 모두 찾았습니다!</p>
+                        <button class="btn btn-complete-restart primary" style="font-size: 1.1rem; padding: 10px 20px;">다시 시작</button>
                     </div>
-                </div>
-            </section>
-        </main>
+                </section>
+
+                <section class="info-section">
+                    <div class="panel found-words-panel">
+                        <h3>찾은 단어 (<span class="found-count">0</span>)</h3>
+                        <div class="found-words-list words-list"></div>
+                    </div>
+
+                    <div class="panel current-selection-panel">
+                        <h3>현재 선택한 글자</h3>
+                        <div class="current-selection-display selection-display">
+                            <span class="placeholder">클릭하세요</span>
+                        </div>
+                        <div class="action-buttons" style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button class="btn btn-clear-selection secondary" style="flex: 1;">선택 취소</button>
+                            <button class="btn btn-check-word primary" style="flex: 2;">정답 확인</button>
+                        </div>
+                        <div class="action-buttons-extra" style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-pause secondary" style="flex: 1; font-size: 0.9rem;">일시정지</button>
+                            <button class="btn btn-new-game primary" style="flex: 1; font-size: 0.9rem;">다시 시작</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </template>
     </div>
 
     <script src="script.js"></script>

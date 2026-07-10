@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="18" fill="#0f172a"/>
+  <rect x="12" y="12" width="23" height="23" rx="5" fill="#1e293b"/>
+  <rect x="38.5" y="12" width="23" height="23" rx="5" fill="#1e293b"/>
+  <rect x="65" y="12" width="23" height="23" rx="5" fill="#1e293b"/>
+  <rect x="12" y="38.5" width="23" height="23" rx="5" fill="#1e293b"/>
+  <rect x="38.5" y="38.5" width="23" height="23" rx="5" fill="#fbbf24"/>
+  <rect x="65" y="38.5" width="23" height="23" rx="5" fill="#1e293b"/>
+  <rect x="12" y="65" width="23" height="23" rx="5" fill="#1e293b"/>
+  <rect x="38.5" y="65" width="23" height="23" rx="5" fill="#1e293b"/>
+  <rect x="65" y="65" width="23" height="23" rx="5" fill="#1e293b"/>
+  <text x="23.5" y="29" font-family="Segoe UI, sans-serif" font-size="13" font-weight="800" fill="#38bdf8" text-anchor="middle">34</text>
+  <text x="50" y="29" font-family="Segoe UI, sans-serif" font-size="13" font-weight="800" fill="#38bdf8" text-anchor="middle">35</text>
+  <text x="76.5" y="29" font-family="Segoe UI, sans-serif" font-size="13" font-weight="800" fill="#38bdf8" text-anchor="middle">36</text>
+  <text x="23.5" y="55.5" font-family="Segoe UI, sans-serif" font-size="13" font-weight="800" fill="#38bdf8" text-anchor="middle">44</text>
+  <text x="50" y="56.5" font-family="Segoe UI, sans-serif" font-size="15" font-weight="800" fill="#0f172a" text-anchor="middle">?</text>
+  <text x="76.5" y="55.5" font-family="Segoe UI, sans-serif" font-size="13" font-weight="800" fill="#38bdf8" text-anchor="middle">46</text>
+  <text x="23.5" y="82" font-family="Segoe UI, sans-serif" font-size="13" font-weight="800" fill="#38bdf8" text-anchor="middle">54</text>
+  <text x="50" y="82" font-family="Segoe UI, sans-serif" font-size="13" font-weight="800" fill="#38bdf8" text-anchor="middle">55</text>
+  <text x="76.5" y="82" font-family="Segoe UI, sans-serif" font-size="13" font-weight="800" fill="#38bdf8" text-anchor="middle">56</text>
+</svg>

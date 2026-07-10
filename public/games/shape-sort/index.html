@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>모양 분류 × 4</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --cell-front: #38bdf8;
+    --cell-back: #fbbf24;
+    --text-dark: #0f172a;
+    --text-light: #e2e8f0;
+    --accent: #34d399;
+    --wrong: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    overflow: hidden;
+  }
+  #games {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  .game {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 8px 8px;
+    overflow: hidden;
+  }
+  .game h2 {
+    font-size: 1rem;
+    letter-spacing: 1px;
+    margin-top: auto; /* 제목·HUD·보드를 패널 바닥 쪽으로 밀어내림 */
+    margin-bottom: 6px;
+    color: #94a3b8;
+  }
+  .game h2 span { color: var(--cell-front); }
+  .hud {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    margin-bottom: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+  .hud .box {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    padding: 4px 10px;
+    text-align: center;
+    min-width: 0;
+    flex: 1 1 0;
+    max-width: 110px;
+  }
+  .hud .label {
+    font-size: 0.6rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .hud .value {
+    font-size: clamp(0.9rem, 1.6vw, 1.3rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .hud .value.prog { color: var(--accent); }
+  .item {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .item .emoji {
+    font-size: clamp(3rem, 7vw, 5.5rem);
+    line-height: 1.15;
+  }
+  .item .iname {
+    font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+    color: #94a3b8;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .cats {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .cat {
+    border: none;
+    border-radius: 12px;
+    min-height: 52px;
+    font-size: clamp(1rem, 1.8vw, 1.4rem);
+    font-weight: 800;
+    font-family: inherit;
+    cursor: pointer;
+    color: var(--text-dark);
+    touch-action: none;
+  }
+  .cat[data-cat="box"] { background: var(--cell-back); }
+  .cat[data-cat="cyl"] { background: var(--cell-front); }
+  .cat[data-cat="ball"] { background: var(--accent); }
+  .cat.shake { animation: shake 0.25s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    backdrop-filter: blur(3px);
+    border-radius: 14px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .hidden { display: none; }
+  .overlay .title { font-size: clamp(1.2rem, 2.5vw, 2rem); font-weight: 800; }
+  .overlay .result {
+    font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    color: var(--cell-back);
+    font-variant-numeric: tabular-nums;
+  }
+  .overlay .sub { color: #94a3b8; font-size: 0.9rem; text-align: center; padding: 0 8px; }
+  .overlay .newrecord {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .overlay .big {
+    background: var(--accent);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 32px;
+    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .overlay .tap { color: #64748b; font-size: 0.75rem; }
+  /* players=1: 좁은 단독 뷰포트(iframe, ≈25% 폭)용 오버라이드 — vw 항을 약 4배로 재조정 */
+  .players-1 .hud .value { font-size: clamp(0.9rem, 6.4vw, 1.3rem); }
+  .players-1 .item .emoji { font-size: clamp(3rem, 28vw, 5.5rem); }
+  .players-1 .item .iname { font-size: clamp(0.85rem, 6vw, 1.1rem); }
+  .players-1 .cat { font-size: clamp(1rem, 7.2vw, 1.4rem); }
+  .players-1 .overlay .title { font-size: clamp(1.2rem, 10vw, 2rem); }
+  .players-1 .overlay .result { font-size: clamp(1.6rem, 14vw, 2.8rem); }
+  .players-1 .overlay .big { font-size: clamp(1rem, 7.2vw, 1.2rem); }
+</style>
+</head>
+<body>
+
+<div id="games"></div>
+
+<script>
+(() => {
+  const BEST_KEY = 'shape-sort-best';
+  const TOTAL = 12;
+  const PLAYERS = Math.max(1, Math.min(4, parseInt(new URLSearchParams(location.search).get('players'), 10) || 4));
+  document.body.classList.add('players-' + PLAYERS);
+
+  /* 물건 풀: cat = box(상자) / cyl(둥근 기둥) / ball(공) */
+  const ITEMS = [
+    { e: '🎁', n: '선물', cat: 'box' },
+    { e: '📦', n: '상자', cat: 'box' },
+    { e: '📚', n: '책', cat: 'box' },
+    { e: '🧊', n: '얼음', cat: 'box' },
+    { e: '🍫', n: '초콜릿', cat: 'box' },
+    { e: '🧱', n: '벽돌', cat: 'box' },
+    { e: '🥫', n: '캔', cat: 'cyl' },
+    { e: '🧻', n: '휴지', cat: 'cyl' },
+    { e: '🥁', n: '북', cat: 'cyl' },
+    { e: '🪣', n: '양동이', cat: 'cyl' },
+    { e: '🔋', n: '건전지', cat: 'cyl' },
+    { e: '⚽', n: '축구공', cat: 'ball' },
+    { e: '🏀', n: '농구공', cat: 'ball' },
+    { e: '⚾', n: '야구공', cat: 'ball' },
+    { e: '🎾', n: '테니스공', cat: 'ball' },
+    { e: '🍊', n: '귤', cat: 'ball' },
+    { e: '🌍', n: '지구', cat: 'ball' }
+  ];
+
+  /* 우클릭 및 롱프레스 컨텍스트 메뉴 차단 */
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  /* 드래그/텍스트 선택으로 인한 입력 방해 차단 */
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  /* 연속 같은 카테고리 3회 이상 안 나오는지 검사 */
+  function noTripleRun(list) {
+    for (let i = 2; i < list.length; i++) {
+      if (list[i].cat === list[i - 1].cat && list[i].cat === list[i - 2].cat) return false;
+    }
+    return true;
+  }
+
+  /* 카테고리별 4개씩 12문제, 같은 카테고리 3연속 금지 */
+  function buildQueue() {
+    const byCat = { box: [], cyl: [], ball: [] };
+    ITEMS.forEach(it => byCat[it.cat].push(it));
+    for (let tries = 0; tries < 300; tries++) {
+      const picked = [].concat(
+        shuffle(byCat.box.slice()).slice(0, 4),
+        shuffle(byCat.cyl.slice()).slice(0, 4),
+        shuffle(byCat.ball.slice()).slice(0, 4)
+      );
+      shuffle(picked);
+      if (noTripleRun(picked)) return picked;
+    }
+    /* 사실상 도달하지 않음: 최후 수단으로 카테고리 교차 배치 */
+    const cols = [shuffle(byCat.box.slice()).slice(0, 4), shuffle(byCat.cyl.slice()).slice(0, 4), shuffle(byCat.ball.slice()).slice(0, 4)];
+    const out = [];
+    for (let i = 0; i < 4; i++) for (let c = 0; c < 3; c++) out.push(cols[c][i]);
+    return out;
+  }
+
+  function loadBest() {
+    const b = localStorage.getItem(BEST_KEY);
+    return b ? Number(b) : null;
+  }
+
+  function formatTime(ms) {
+    return (ms / 1000).toFixed(2);
+  }
+
+  function createGame(root, index) {
+    root.className = 'game';
+    root.innerHTML = `
+      <h2>${PLAYERS === 1 ? '' : 'PLAYER ' + (index + 1) + ' · '}모양 <span>분류</span></h2>
+      <div class="hud">
+        <div class="box"><div class="label">진행</div><div class="value prog">0/${TOTAL}</div></div>
+        <div class="box"><div class="label">시간</div><div class="value time">0.00</div></div>
+        <div class="box"><div class="label">최고</div><div class="value best">-</div></div>
+      </div>
+      <div class="item">
+        <div class="emoji"></div>
+        <div class="iname"></div>
+      </div>
+      <div class="cats">
+        <button class="cat" data-cat="box">📦 상자 모양</button>
+        <button class="cat" data-cat="cyl">🥫 둥근 기둥</button>
+        <button class="cat" data-cat="ball">⚽ 공 모양</button>
+      </div>
+      <div class="overlay">
+        <div class="title">모양 분류</div>
+        <div class="result hidden"></div>
+        <div class="newrecord" style="display:none">🎉 신기록!</div>
+        <div class="sub">물건이 어떤 모양인지 골라요!</div>
+        <button class="big">게임 시작</button>
+        <div class="tap">화면 아무 곳이나 터치해도 시작</div>
+      </div>`;
+
+    const emojiEl = root.querySelector('.emoji');
+    const nameEl = root.querySelector('.iname');
+    const catsEl = root.querySelector('.cats');
+    const progEl = root.querySelector('.value.prog');
+    const timerEl = root.querySelector('.value.time');
+    const bestEl = root.querySelector('.value.best');
+    const overlay = root.querySelector('.overlay');
+    const overlayTitle = overlay.querySelector('.title');
+    const overlayResult = overlay.querySelector('.result');
+    const overlayRecord = overlay.querySelector('.newrecord');
+    const overlaySub = overlay.querySelector('.sub');
+    const startBtn = overlay.querySelector('.big');
+
+    let queue = [];
+    let solved = 0;
+    let startTime = 0;
+    let timerId = null;
+    let playing = false;
+
+    function refreshBest() {
+      const b = loadBest();
+      bestEl.textContent = b !== null ? b.toFixed(2) : '-';
+    }
+
+    function tick() {
+      timerEl.textContent = formatTime(performance.now() - startTime);
+    }
+
+    function showItem() {
+      const it = queue[solved];
+      emojiEl.textContent = it.e;
+      nameEl.textContent = it.n;
+    }
+
+    function onCat(btn) {
+      if (!playing) return;
+      if (btn.dataset.cat !== queue[solved].cat) {
+        btn.classList.remove('shake');
+        void btn.offsetWidth; /* 애니메이션 재시작 트릭 */
+        btn.classList.add('shake');
+        return;
+      }
+      solved++;
+      progEl.textContent = solved + '/' + TOTAL;
+      if (solved >= TOTAL) return finish();
+      showItem();
+    }
+
+    /* pointerdown 위임: 손가락이 닿는 순간 처리 */
+    catsEl.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return; /* 마우스는 좌클릭만 */
+      const btn = e.target.closest('.cat');
+      if (!btn) return;
+      e.preventDefault(); /* 합성 click/더블탭 줌 등 후속 이벤트 방지 */
+      onCat(btn);
+    });
+
+    function start() {
+      queue = buildQueue();
+      solved = 0;
+      progEl.textContent = '0/' + TOTAL;
+      timerEl.textContent = '0.00';
+      refreshBest();
+      showItem();
+      overlay.classList.add('hidden');
+      playing = true;
+      startTime = performance.now();
+      clearInterval(timerId);
+      timerId = setInterval(tick, 31);
+    }
+
+    function finish() {
+      playing = false;
+      clearInterval(timerId);
+      const elapsed = performance.now() - startTime;
+      timerEl.textContent = formatTime(elapsed);
+
+      const prevBest = loadBest();
+      const secs = elapsed / 1000;
+      const isRecord = prevBest === null || secs < prevBest;
+      if (isRecord) localStorage.setItem(BEST_KEY, secs.toFixed(2));
+      refreshBest();
+
+      overlayTitle.textContent = '완료!';
+      overlayResult.textContent = secs.toFixed(2) + '초';
+      overlayResult.classList.remove('hidden');
+      overlayRecord.style.display = isRecord ? 'block' : 'none';
+      overlaySub.textContent = isRecord ? '' : '최고 기록: ' + loadBest().toFixed(2) + '초';
+      startBtn.textContent = '다시 하기';
+      overlay.classList.remove('hidden');
+    }
+
+    /* 오버레이 전체가 시작 버튼: 끝난 즉시 아무 곳이나 눌러 재시작 */
+    overlay.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      start();
+    });
+
+    refreshBest();
+    queue = buildQueue();
+    showItem(); /* 시작 전 미리보기 */
+  }
+
+  const container = document.getElementById('games');
+  for (let i = 0; i < PLAYERS; i++) {
+    const panel = document.createElement('div');
+    container.appendChild(panel);
+    createGame(panel, i);
+  }
+})();
+</script>
+</body>
+</html>

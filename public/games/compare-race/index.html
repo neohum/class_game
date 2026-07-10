@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>길다 짧다 × 4</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --cell-front: #38bdf8;
+    --cell-back: #fbbf24;
+    --text-dark: #0f172a;
+    --text-light: #e2e8f0;
+    --accent: #34d399;
+    --wrong: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    overflow: hidden;
+  }
+  #games {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  .game {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 8px 8px;
+    overflow: hidden;
+  }
+  .game h2 {
+    font-size: 1rem;
+    letter-spacing: 1px;
+    margin-top: auto; /* 제목·HUD·보드를 패널 바닥 쪽으로 밀어내림 */
+    margin-bottom: 6px;
+    color: #94a3b8;
+  }
+  .game h2 span { color: var(--cell-front); }
+  .hud {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    margin-bottom: 10px;
+    width: 100%;
+    justify-content: center;
+  }
+  .hud .box {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    padding: 4px 10px;
+    text-align: center;
+    min-width: 0;
+    flex: 1 1 0;
+    max-width: 110px;
+  }
+  .hud .label {
+    font-size: 0.6rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .hud .value {
+    font-size: clamp(0.9rem, 1.6vw, 1.3rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .hud .value.prog { color: var(--accent); }
+  .question {
+    font-size: clamp(1.1rem, 2.2vw, 1.8rem);
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 14px;
+    min-height: 1.4em;
+  }
+  .question .key { font-size: 1.15em; }
+  .question .key.long { color: var(--cell-front); }
+  .question .key.short { color: var(--cell-back); }
+  .ribbons {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-bottom: 12px;
+  }
+  .ribbon {
+    height: clamp(48px, 9vh, 72px);
+    border-radius: 999px;
+    cursor: pointer;
+    touch-action: none;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  }
+  .ribbon.shake { animation: shake 0.25s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    backdrop-filter: blur(3px);
+    border-radius: 14px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .hidden { display: none; }
+  .overlay .title { font-size: clamp(1.2rem, 2.5vw, 2rem); font-weight: 800; }
+  .overlay .result {
+    font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    color: var(--cell-back);
+    font-variant-numeric: tabular-nums;
+  }
+  .overlay .sub { color: #94a3b8; font-size: 0.9rem; text-align: center; padding: 0 8px; }
+  .overlay .newrecord {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .overlay .big {
+    background: var(--accent);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 32px;
+    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .overlay .tap { color: #64748b; font-size: 0.75rem; }
+  /* players=1: 패널 폭 ≈ 뷰포트 폭(좁은 iframe)이므로 vw 기반 크기를 약 4배로 보정 */
+  .players-1 .hud .value { font-size: clamp(0.9rem, 6.4vw, 1.3rem); }
+  .players-1 .question { font-size: clamp(1.1rem, 8.8vw, 1.8rem); }
+  .players-1 .overlay .title { font-size: clamp(1.2rem, 10vw, 2rem); }
+  .players-1 .overlay .result { font-size: clamp(1.6rem, 14vw, 2.8rem); }
+  .players-1 .overlay .big { font-size: clamp(1rem, 7.2vw, 1.2rem); }
+</style>
+</head>
+<body>
+
+<div id="games"></div>
+
+<script>
+(() => {
+  const BEST_KEY = 'compare-race-best';
+  const TOTAL = 10;
+  const COLORS = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#38bdf8', '#a78bfa', '#f472b6'];
+
+  /* ?players=N (1~4): 랜덤 게임 허브가 1인용 좁은 iframe으로 로드할 때 사용 */
+  const PLAYERS = Math.max(1, Math.min(4, parseInt(new URLSearchParams(location.search).get('players'), 10) || 4));
+  document.body.classList.add('players-' + PLAYERS);
+
+  /* 우클릭 및 롱프레스 컨텍스트 메뉴 차단 */
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  /* 드래그/텍스트 선택으로 인한 입력 방해 차단 */
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function loadBest() {
+    const b = localStorage.getItem(BEST_KEY);
+    return b ? Number(b) : null;
+  }
+
+  function formatTime(ms) {
+    return (ms / 1000).toFixed(2);
+  }
+
+  function createGame(root, index) {
+    root.className = 'game';
+    const heading = PLAYERS === 1 ? '길다 <span>짧다</span>' : `PLAYER ${index + 1} · 길다 <span>짧다</span>`;
+    root.innerHTML = `
+      <h2>${heading}</h2>
+      <div class="hud">
+        <div class="box"><div class="label">진행</div><div class="value prog">0/${TOTAL}</div></div>
+        <div class="box"><div class="label">시간</div><div class="value time">0.00</div></div>
+        <div class="box"><div class="label">최고</div><div class="value best">-</div></div>
+      </div>
+      <div class="question"></div>
+      <div class="ribbons">
+        <div class="ribbon" data-idx="0"></div>
+        <div class="ribbon" data-idx="1"></div>
+      </div>
+      <div class="overlay">
+        <div class="title">길다 짧다</div>
+        <div class="result hidden"></div>
+        <div class="newrecord" style="display:none">🎉 신기록!</div>
+        <div class="sub">더 긴 것, 더 짧은 것을 잘 보고 눌러요!</div>
+        <button class="big">게임 시작</button>
+        <div class="tap">화면 아무 곳이나 터치해도 시작</div>
+      </div>`;
+
+    const questionEl = root.querySelector('.question');
+    const ribbonsEl = root.querySelector('.ribbons');
+    const ribbonEls = root.querySelectorAll('.ribbon');
+    const progEl = root.querySelector('.value.prog');
+    const timerEl = root.querySelector('.value.time');
+    const bestEl = root.querySelector('.value.best');
+    const overlay = root.querySelector('.overlay');
+    const overlayTitle = overlay.querySelector('.title');
+    const overlayResult = overlay.querySelector('.result');
+    const overlayRecord = overlay.querySelector('.newrecord');
+    const overlaySub = overlay.querySelector('.sub');
+    const startBtn = overlay.querySelector('.big');
+
+    let solved = 0;
+    let answerIdx = 0; /* 정답 리본(0=위, 1=아래) */
+    let startTime = 0;
+    let timerId = null;
+    let playing = false;
+
+    function refreshBest() {
+      const b = loadBest();
+      bestEl.textContent = b !== null ? b.toFixed(2) : '-';
+    }
+
+    function tick() {
+      timerEl.textContent = formatTime(performance.now() - startTime);
+    }
+
+    function newProblem() {
+      /* 짧은 리본 40~75%, 긴 리본은 최소 20%p 더 길고 최대 95% */
+      const shortLen = 40 + Math.random() * 35;
+      const longLen = shortLen + 20 + Math.random() * (95 - shortLen - 20);
+      const longOnTop = Math.random() < 0.5;
+      const lens = longOnTop ? [longLen, shortLen] : [shortLen, longLen];
+      const colors = shuffle(COLORS.slice()).slice(0, 2);
+      ribbonEls.forEach((el, i) => {
+        el.style.width = lens[i].toFixed(1) + '%';
+        el.style.background = colors[i];
+        el.style.alignSelf = 'flex-start';
+      });
+      const askLong = Math.random() < 0.5;
+      answerIdx = (askLong === longOnTop) ? 0 : 1;
+      questionEl.innerHTML = askLong
+        ? '더 <span class="key long">긴</span> 것을 눌러요!'
+        : '더 <span class="key short">짧은</span> 것을 눌러요!';
+    }
+
+    function onRibbon(el) {
+      if (!playing) return;
+      if (Number(el.dataset.idx) !== answerIdx) {
+        el.classList.remove('shake');
+        void el.offsetWidth; /* 애니메이션 재시작 트릭 */
+        el.classList.add('shake');
+        return;
+      }
+      solved++;
+      progEl.textContent = solved + '/' + TOTAL;
+      if (solved >= TOTAL) return finish();
+      newProblem();
+    }
+
+    /* pointerdown 위임: 손가락이 닿는 순간 처리 */
+    ribbonsEl.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return; /* 마우스는 좌클릭만 */
+      const el = e.target.closest('.ribbon');
+      if (!el) return;
+      e.preventDefault(); /* 합성 click/더블탭 줌 등 후속 이벤트 방지 */
+      onRibbon(el);
+    });
+
+    function start() {
+      solved = 0;
+      progEl.textContent = '0/' + TOTAL;
+      timerEl.textContent = '0.00';
+      refreshBest();
+      newProblem();
+      overlay.classList.add('hidden');
+      playing = true;
+      startTime = performance.now();
+      clearInterval(timerId);
+      timerId = setInterval(tick, 31);
+    }
+
+    function finish() {
+      playing = false;
+      clearInterval(timerId);
+      const elapsed = performance.now() - startTime;
+      timerEl.textContent = formatTime(elapsed);
+
+      const prevBest = loadBest();
+      const secs = elapsed / 1000;
+      const isRecord = prevBest === null || secs < prevBest;
+      if (isRecord) localStorage.setItem(BEST_KEY, secs.toFixed(2));
+      refreshBest();
+
+      overlayTitle.textContent = '완료!';
+      overlayResult.textContent = secs.toFixed(2) + '초';
+      overlayResult.classList.remove('hidden');
+      overlayRecord.style.display = isRecord ? 'block' : 'none';
+      overlaySub.textContent = isRecord ? '' : '최고 기록: ' + loadBest().toFixed(2) + '초';
+      startBtn.textContent = '다시 하기';
+      overlay.classList.remove('hidden');
+    }
+
+    /* 오버레이 전체가 시작 버튼: 끝난 즉시 아무 곳이나 눌러 재시작 */
+    overlay.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      start();
+    });
+
+    refreshBest();
+    newProblem(); /* 시작 전 미리보기 */
+  }
+
+  const container = document.getElementById('games');
+  for (let i = 0; i < PLAYERS; i++) {
+    const panel = document.createElement('div');
+    container.appendChild(panel);
+    createGame(panel, i);
+  }
+})();
+</script>
+</body>
+</html>

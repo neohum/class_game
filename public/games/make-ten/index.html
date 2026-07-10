@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>10 만들기 × 4</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --cell-front: #38bdf8;
+    --cell-front-hover: #7dd3fc;
+    --cell-back: #fbbf24;
+    --cell-back-hover: #fcd34d;
+    --text-dark: #0f172a;
+    --text-light: #e2e8f0;
+    --accent: #34d399;
+    --wrong: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;      /* 스크롤/줌 제스처 판정 지연 제거 → 터치 즉시 반응 */
+    overflow: hidden;
+  }
+  #games {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  .game {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 8px 8px;
+    overflow: hidden;
+  }
+  .game h2 {
+    font-size: 1rem;
+    letter-spacing: 1px;
+    margin-top: auto; /* 제목·HUD·보드를 패널 바닥 쪽으로 밀어내림 */
+    margin-bottom: 6px;
+    color: #94a3b8;
+  }
+  .game h2 span { color: var(--cell-front); }
+  .hud {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    margin-bottom: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+  .hud .box {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    padding: 4px 10px;
+    text-align: center;
+    min-width: 0;
+    flex: 1 1 0;
+    max-width: 110px;
+  }
+  .hud .label {
+    font-size: 0.6rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .hud .value {
+    font-size: clamp(0.9rem, 1.6vw, 1.3rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .hud .value.pairs { color: var(--accent); }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: min(19vw, 36vh);
+  }
+  .cell {
+    aspect-ratio: 1;
+    border: 3px solid transparent;
+    border-radius: 12px;
+    font-size: clamp(1.3rem, 3.2vw, 2.4rem);
+    font-weight: 800;
+    font-family: inherit;
+    cursor: pointer;
+    color: var(--text-dark);
+    background: var(--cell-front);
+    touch-action: none;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .cell:hover { background: var(--cell-front-hover); }
+  .cell.sel {
+    background: var(--cell-back);
+    border-color: #fff;
+    transform: scale(1.06);
+  }
+  .cell.sel:hover { background: var(--cell-back-hover); }
+  .cell.empty {
+    background: transparent;
+    border-color: transparent;
+    cursor: default;
+    pointer-events: none;
+    transform: none;
+  }
+  .cell.shake { animation: shake 0.25s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    backdrop-filter: blur(3px);
+    border-radius: 14px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .hidden { display: none; }
+  .overlay .title { font-size: clamp(1.2rem, 2.5vw, 2rem); font-weight: 800; }
+  .overlay .result {
+    font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    color: var(--cell-back);
+    font-variant-numeric: tabular-nums;
+  }
+  .overlay .sub { color: #94a3b8; font-size: 0.9rem; text-align: center; }
+  .overlay .newrecord {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .overlay .big {
+    background: var(--accent);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 32px;
+    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .overlay .tap { color: #64748b; font-size: 0.75rem; }
+  /* players=1: 패널 폭 ≈ 뷰포트 폭(좁은 iframe)이므로 vw 기반 크기를 약 4배로 보정 */
+  .players-1 .hud .value { font-size: clamp(0.9rem, 6.4vw, 1.3rem); }
+  .players-1 .board { max-width: min(76%, 36vh); }
+  .players-1 .cell { font-size: clamp(1.3rem, 12.8vw, 2.4rem); }
+  .players-1 .overlay .title { font-size: clamp(1.2rem, 10vw, 2rem); }
+  .players-1 .overlay .result { font-size: clamp(1.6rem, 14vw, 2.8rem); }
+  .players-1 .overlay .big { font-size: clamp(1rem, 7.2vw, 1.2rem); }
+</style>
+</head>
+<body>
+
+<div id="games"></div>
+
+<script>
+(() => {
+  const BEST_KEY = 'make-ten-best';
+  const BOARDS = 3;          /* 총 보드 수 */
+  const PAIRS_PER_BOARD = 6; /* 보드당 쌍 수 */
+  const TOTAL_PAIRS = BOARDS * PAIRS_PER_BOARD; /* 18 */
+
+  /* ?players=N (1~4): 랜덤 게임 허브가 1인용 좁은 iframe으로 로드할 때 사용 */
+  const PLAYERS = Math.max(1, Math.min(4, parseInt(new URLSearchParams(location.search).get('players'), 10) || 4));
+  document.body.classList.add('players-' + PLAYERS);
+
+  /* 우클릭 및 롱프레스 컨텍스트 메뉴 차단 */
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  /* 드래그/텍스트 선택으로 인한 입력 방해 차단 */
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function loadBest() {
+    const b = localStorage.getItem(BEST_KEY);
+    return b ? Number(b) : null;
+  }
+
+  function formatTime(ms) {
+    return (ms / 1000).toFixed(2);
+  }
+
+  /* 합이 10인 6쌍 → 12장의 숫자. 쌍 구성은 매 보드 무작위. */
+  function makeBoardNumbers() {
+    const as = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]).slice(0, PAIRS_PER_BOARD - 1);
+    as.push(1 + Math.floor(Math.random() * 9)); /* 무작위 한 쌍 더 */
+    const nums = [];
+    as.forEach(a => { nums.push(a, 10 - a); });
+    return shuffle(nums);
+  }
+
+  function createGame(root, index) {
+    root.className = 'game';
+    const heading = PLAYERS === 1 ? '<span>10</span> 만들기' : `PLAYER ${index + 1} · <span>10</span> 만들기`;
+    root.innerHTML = `
+      <h2>${heading}</h2>
+      <div class="hud">
+        <div class="box"><div class="label">남은 쌍</div><div class="value pairs">${TOTAL_PAIRS}/${TOTAL_PAIRS}</div></div>
+        <div class="box"><div class="label">시간</div><div class="value time">0.00</div></div>
+        <div class="box"><div class="label">최고</div><div class="value best">-</div></div>
+      </div>
+      <div class="board"></div>
+      <div class="overlay">
+        <div class="title">10 만들기</div>
+        <div class="result hidden"></div>
+        <div class="newrecord" style="display:none">🎉 신기록!</div>
+        <div class="sub">합이 10이 되는 두 카드를 찾아요!</div>
+        <button class="big">게임 시작</button>
+        <div class="tap">화면 아무 곳이나 터치해도 시작</div>
+      </div>`;
+
+    const boardEl = root.querySelector('.board');
+    const pairsEl = root.querySelector('.value.pairs');
+    const timerEl = root.querySelector('.value.time');
+    const bestEl = root.querySelector('.value.best');
+    const overlay = root.querySelector('.overlay');
+    const overlayTitle = overlay.querySelector('.title');
+    const overlayResult = overlay.querySelector('.result');
+    const overlayRecord = overlay.querySelector('.newrecord');
+    const overlaySub = overlay.querySelector('.sub');
+    const startBtn = overlay.querySelector('.big');
+
+    let pairsLeft = TOTAL_PAIRS;
+    let boardPairsLeft = PAIRS_PER_BOARD;
+    let boardsDone = 0;
+    let sel = null; /* 선택된 카드 요소 */
+    let startTime = 0;
+    let timerId = null;
+    let playing = false;
+
+    function refreshBest() {
+      const b = loadBest();
+      bestEl.textContent = b !== null ? b.toFixed(2) : '-';
+    }
+
+    function tick() {
+      timerEl.textContent = formatTime(performance.now() - startTime);
+    }
+
+    function buildBoard() {
+      boardEl.innerHTML = '';
+      sel = null;
+      boardPairsLeft = PAIRS_PER_BOARD;
+      makeBoardNumbers().forEach(n => {
+        const btn = document.createElement('button');
+        btn.className = 'cell';
+        btn.textContent = n;
+        btn.dataset.v = n;
+        boardEl.appendChild(btn);
+      });
+    }
+
+    function shakeIt(el) {
+      el.classList.remove('shake');
+      void el.offsetWidth; /* 애니메이션 재시작 트릭 */
+      el.classList.add('shake');
+    }
+
+    function clearCard(btn) {
+      btn.classList.remove('sel');
+      btn.classList.add('empty');
+      btn.textContent = '';
+      btn.disabled = true;
+    }
+
+    function onCell(btn) {
+      if (!playing || btn.classList.contains('empty')) return;
+
+      if (!sel) {
+        sel = btn;
+        btn.classList.add('sel');
+        return;
+      }
+      if (sel === btn) { /* 같은 카드 다시 탭 → 선택 해제 */
+        btn.classList.remove('sel');
+        sel = null;
+        return;
+      }
+
+      const a = Number(sel.dataset.v);
+      const b = Number(btn.dataset.v);
+      if (a + b === 10) {
+        clearCard(sel);
+        clearCard(btn);
+        sel = null;
+        pairsLeft--;
+        boardPairsLeft--;
+        pairsEl.textContent = pairsLeft + '/' + TOTAL_PAIRS;
+        if (boardPairsLeft === 0) {
+          boardsDone++;
+          if (boardsDone >= BOARDS) return finish();
+          buildBoard(); /* 보드를 다 지우면 새 보드 자동 생성 */
+        }
+      } else {
+        shakeIt(sel);
+        shakeIt(btn);
+        sel.classList.remove('sel');
+        sel = null;
+      }
+    }
+
+    /* pointerdown 위임: 손가락이 닿는 순간 처리, 멀티터치에서 포인터마다 독립 발생 */
+    boardEl.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return; /* 마우스는 좌클릭만 */
+      const btn = e.target.closest('.cell');
+      if (!btn) return;
+      e.preventDefault(); /* 합성 click/더블탭 줌 등 후속 이벤트 방지 */
+      onCell(btn);
+    });
+
+    function start() {
+      pairsLeft = TOTAL_PAIRS;
+      boardsDone = 0;
+      buildBoard();
+      pairsEl.textContent = TOTAL_PAIRS + '/' + TOTAL_PAIRS;
+      timerEl.textContent = '0.00';
+      refreshBest();
+      overlay.classList.add('hidden');
+      playing = true;
+      startTime = performance.now();
+      clearInterval(timerId);
+      timerId = setInterval(tick, 31);
+    }
+
+    function finish() {
+      playing = false;
+      clearInterval(timerId);
+      const elapsed = performance.now() - startTime;
+      timerEl.textContent = formatTime(elapsed);
+
+      const prevBest = loadBest();
+      const secs = elapsed / 1000;
+      const isRecord = prevBest === null || secs < prevBest;
+      if (isRecord) localStorage.setItem(BEST_KEY, secs.toFixed(2));
+      refreshBest();
+
+      overlayTitle.textContent = '완료!';
+      overlayResult.textContent = secs.toFixed(2) + '초';
+      overlayResult.classList.remove('hidden');
+      overlayRecord.style.display = isRecord ? 'block' : 'none';
+      overlaySub.textContent = isRecord ? '' : '최고 기록: ' + loadBest().toFixed(2) + '초';
+      startBtn.textContent = '다시 하기';
+      overlay.classList.remove('hidden');
+    }
+
+    /* 오버레이 전체가 시작 버튼: 끝난 즉시 아무 곳이나 눌러 재시작 */
+    overlay.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      start();
+    });
+
+    refreshBest();
+    buildBoard(); /* 시작 전 미리보기용 보드 */
+  }
+
+  const container = document.getElementById('games');
+  for (let i = 0; i < PLAYERS; i++) {
+    const panel = document.createElement('div');
+    container.appendChild(panel);
+    createGame(panel, i);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>랜덤 게임 × 4</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --text-light: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg); }
+  body {
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+  #panels {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  .panel {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .bar {
+    height: 40px;
+    flex: 0 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 0 6px 0 10px;
+    background: rgba(15, 23, 42, 0.6);
+  }
+  .bar .name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-light);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .bar .name .player { color: var(--accent); }
+  .bar .name .dot { color: var(--muted); font-weight: 400; }
+  .shuffle {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-light);
+    font-size: 1.2rem;
+    font-family: inherit;
+    cursor: pointer;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .shuffle:hover { background: rgba(56, 189, 248, 0.15); }
+  .panel iframe {
+    flex: 1;
+    width: 100%;
+    border: 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="panels"></div>
+
+<script>
+(() => {
+  /* 우클릭 및 롱프레스 컨텍스트 메뉴 차단 */
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  /* 드래그/텍스트 선택으로 인한 입력 방해 차단 */
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  /* 게임 풀: id → 한글 이름 */
+  const GAMES = [
+    ['make-ten', '10 만들기'],
+    ['bigger-number', '큰 수가 이겨!'],
+    ['missing-number', '징검다리 수'],
+    ['compare-race', '길다 짧다'],
+    ['shape-sort', '모양 분류'],
+    ['pattern-next', '규칙 찾기'],
+    ['hundred-chart', '100판 숨은 수'],
+    ['rocket-math', '로켓 수학'],
+    ['clock-read', '몇 시일까요'],
+    ['even-odd-run', '짝수 홀수 달리기'],
+    ['bomb-defuse', '수 폭탄'],
+    ['count-down-50', '거꾸로 50'],
+  ];
+  const NAME_BY_ID = new Map(GAMES);
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function gameUrl(id) {
+    return '/games/' + id + '/index.html?players=1';
+  }
+
+  /* 패널별 현재 게임 id */
+  const current = shuffle(GAMES.map(g => g[0])).slice(0, 4);
+
+  const panelsEl = document.getElementById('panels');
+  const panels = [];
+
+  function setGame(index, id) {
+    current[index] = id;
+    const p = panels[index];
+    p.nameEl.innerHTML =
+      '<span class="player">PLAYER ' + (index + 1) + '</span>' +
+      '<span class="dot"> · </span>' + NAME_BY_ID.get(id);
+    p.frameEl.src = gameUrl(id);
+  }
+
+  function rerollPanel(index) {
+    const candidates = GAMES.map(g => g[0]).filter(id => !current.includes(id));
+    if (candidates.length === 0) return;
+    const next = candidates[Math.floor(Math.random() * candidates.length)];
+    setGame(index, next);
+  }
+
+  for (let i = 0; i < 4; i++) {
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'name';
+
+    const btn = document.createElement('button');
+    btn.className = 'shuffle';
+    btn.type = 'button';
+    btn.textContent = '🔀';
+    btn.setAttribute('aria-label', '다른 게임');
+    btn.title = '다른 게임';
+    btn.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return; /* 마우스는 좌클릭만 */
+      e.preventDefault(); /* 합성 click/더블탭 줌 등 후속 이벤트 방지 */
+      rerollPanel(i);
+    });
+
+    bar.appendChild(nameEl);
+    bar.appendChild(btn);
+
+    const frameEl = document.createElement('iframe');
+    frameEl.setAttribute('allow', '');
+    frameEl.style.cssText = 'flex:1; width:100%; border:0;';
+
+    panel.appendChild(bar);
+    panel.appendChild(frameEl);
+    panelsEl.appendChild(panel);
+
+    panels.push({ nameEl, frameEl });
+  }
+
+  /* 초기 배정: 셔플된 4개 (중복 없음) */
+  for (let i = 0; i < 4; i++) setGame(i, current[i]);
+})();
+</script>
+</body>
+</html>

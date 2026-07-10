@@ -3,7 +3,13 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(node D:/works/create-agent-harness/bin/create.mjs . --name classgame --update --no-install)",
+      "Bash(ls app *)",
+      "Bash(ls src/app)",
+      "Bash(ls pages *)",
+      "Read(//d/works/classgame/public/games/1to50/**)",
+      "Read(//d/works/classgame/public/games/1to50//**)"
     ]
   }
 }

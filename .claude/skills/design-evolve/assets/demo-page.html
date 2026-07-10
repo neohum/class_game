@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280, initial-scale=1" />
+<title>Design Variant Preview — __VARIANT_LABEL__</title>
+<style>
+/* __TOKENS_CSS__ */
+
+/* Framework-agnostic demo layout. Uses ONLY the semantic token vars the
+   token-schema standard defines, so any variant's tokens.css drops in here
+   and the same reference UI renders in its design language. */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--color-surface-base, #fff);
+  color: var(--color-text-primary, #18181b);
+  font-family: var(--font-body, system-ui, sans-serif);
+  line-height: var(--line-height-body, 1.5);
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: var(--grid-container, 1280px); margin: 0 auto; padding: var(--space-8, 3rem) var(--space-6, 2rem); }
+.label { color: var(--color-text-muted, #71717a); font-size: var(--font-size-sm, .875rem); letter-spacing: .04em; text-transform: uppercase; }
+section { margin-bottom: var(--space-8, 3rem); }
+h1 { font-family: var(--font-display, inherit); font-size: var(--font-size-4xl, 3rem); line-height: var(--line-height-tight, 1.1); margin: var(--space-2,.5rem) 0; }
+h2 { font-size: var(--font-size-2xl, 1.75rem); margin: 0 0 var(--space-3,.75rem); }
+p  { color: var(--color-text-secondary, #52525b); max-width: 60ch; }
+
+/* type specimen */
+.specimen > div { margin-bottom: var(--space-2, .5rem); }
+.s-4xl { font-size: var(--font-size-4xl, 3rem); }
+.s-2xl { font-size: var(--font-size-2xl, 1.75rem); }
+.s-lg  { font-size: var(--font-size-lg, 1.25rem); }
+.s-base{ font-size: var(--font-size-base, 1rem); }
+.s-sm  { font-size: var(--font-size-sm, .875rem); color: var(--color-text-muted,#71717a); }
+
+/* palette swatches */
+.swatches { display: flex; flex-wrap: wrap; gap: var(--space-3, .75rem); }
+.swatch { width: 96px; }
+.chip { height: 64px; border-radius: var(--radius-md, .5rem); border: 1px solid var(--color-border-subtle, rgba(0,0,0,.08)); }
+.chip.accent { background: var(--color-accent-default, #4f46e5); }
+.chip.surface{ background: var(--color-surface-raised, #f7f7f8); }
+.chip.text   { background: var(--color-text-primary, #18181b); }
+.chip.sec    { background: var(--color-text-secondary, #52525b); }
+.chip.muted  { background: var(--color-text-muted, #71717a); }
+.swatch span { display: block; font-size: var(--font-size-sm,.8rem); color: var(--color-text-muted,#71717a); margin-top: var(--space-1,.25rem); }
+
+/* components */
+.row { display: flex; gap: var(--space-3, .75rem); align-items: center; flex-wrap: wrap; }
+.btn {
+  font: inherit; font-weight: var(--font-weight-bold, 600);
+  padding: var(--space-3, .75rem) var(--space-5, 1.5rem);
+  border-radius: var(--radius-md, .5rem); border: 1px solid transparent; cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+.btn.primary { background: var(--color-accent-default, #4f46e5); color: var(--color-accent-fg, #fff); box-shadow: var(--shadow-raised, 0 1px 2px rgba(0,0,0,.08)); }
+.btn.ghost   { background: transparent; color: var(--color-text-primary, #18181b); border-color: var(--color-border-strong, rgba(0,0,0,.18)); }
+.card {
+  background: var(--color-surface-raised, #f7f7f8);
+  border: 1px solid var(--color-border-subtle, rgba(0,0,0,.08));
+  border-radius: var(--radius-md, .5rem);
+  padding: var(--space-5, 1.5rem); max-width: 360px;
+  box-shadow: var(--shadow-raised, 0 4px 12px rgba(0,0,0,.06));
+}
+.input {
+  font: inherit; width: 100%; max-width: 360px;
+  padding: var(--space-3, .75rem) var(--space-4, 1rem);
+  border-radius: var(--radius-md, .5rem);
+  border: 1px solid var(--color-border-strong, rgba(0,0,0,.18));
+  background: var(--color-surface-base, #fff); color: var(--color-text-primary, #18181b);
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <section>
+    <div class="label">Variant · __VARIANT_LABEL__</div>
+    <h1>아름다움은 측정된 질서 위에 선다</h1>
+    <p>이 미리보기는 변형의 tokens.css를 고정 레퍼런스 UI에 주입해 렌더한 결과다. taste-judge가 이 스크린샷을 보고 안목 점수를 매긴다.</p>
+    <div class="row">
+      <button class="btn primary">주요 동작</button>
+      <button class="btn ghost">보조 동작</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>타이포 스케일</h2>
+    <div class="specimen">
+      <div class="s-4xl">Display 4xl</div>
+      <div class="s-2xl">Heading 2xl</div>
+      <div class="s-lg">Subhead lg</div>
+      <div class="s-base">본문 base — 읽기 좋은 줄길이와 리듬.</div>
+      <div class="s-sm">Caption sm</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>팔레트</h2>
+    <div class="swatches">
+      <div class="swatch"><div class="chip accent"></div><span>accent</span></div>
+      <div class="swatch"><div class="chip text"></div><span>text</span></div>
+      <div class="swatch"><div class="chip sec"></div><span>secondary</span></div>
+      <div class="swatch"><div class="chip muted"></div><span>muted</span></div>
+      <div class="swatch"><div class="chip surface"></div><span>surface</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>컴포넌트</h2>
+    <div class="row" style="align-items:flex-start">
+      <div class="card">
+        <h2 style="font-size:var(--font-size-lg,1.25rem)">카드 제목</h2>
+        <p style="margin:.25rem 0 1rem">서피스 레이어링과 그림자로 깊이를 표현한다.</p>
+        <button class="btn primary">확인</button>
+      </div>
+      <input class="input" placeholder="입력 필드" />
+    </div>
+  </section>
+</div>
+</body>
+</html>

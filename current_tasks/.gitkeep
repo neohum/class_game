@@ -1,0 +1,2 @@
+# This directory holds per-task lock files (<card>.lock) created at runtime
+# by the autonomous loop. The .gitkeep keeps the empty dir in version control.

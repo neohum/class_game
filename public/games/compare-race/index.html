@@ -173,8 +173,23 @@
   const TOTAL = 10;
   const COLORS = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#38bdf8', '#a78bfa', '#f472b6'];
 
-  /* ?players=N (1~4): 랜덤 게임 허브가 1인용 좁은 iframe으로 로드할 때 사용 */
-  const PLAYERS = Math.max(1, Math.min(4, parseInt(new URLSearchParams(location.search).get('players'), 10) || 4));
+  /* ?players=N (1~6): 랜덤 게임 허브가 1인용 좁은 iframe으로 로드할 때 사용 */
+  const PLAYERS = Math.max(1, Math.min(6, parseInt(new URLSearchParams(location.search).get('players'), 10) || 4));
+
+  /* ?players= 없이 열면 인원수 선택(1·2·6인용)부터 — 고르면 그 인원으로 다시 연다 */
+  if (!new URLSearchParams(location.search).has('players')) {
+    const sel = document.createElement('div');
+    sel.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:14px;padding:0 16px 6vh;background:rgba(15,23,42,0.97);color:#e2e8f0;';
+    sel.innerHTML = '<div style="font-size:clamp(1.3rem,3vw,2.2rem);font-weight:800;">몇 명이서 할까요?</div>'
+      + '<div style="display:flex;gap:12px;width:100%;max-width:720px;">'
+      + [1, 2, 6].map(n => '<button data-p="' + n + '" style="flex:1;border:none;border-radius:14px;background:#38bdf8;color:#0f172a;font-family:inherit;font-weight:800;font-size:clamp(1rem,2.4vw,1.6rem);padding:clamp(14px,3vh,26px) 4px;cursor:pointer;touch-action:none;">' + n + '인용</button>').join('')
+      + '</div>';
+    document.body.appendChild(sel);
+    sel.addEventListener('pointerdown', e => {
+      const btn = e.target.closest('[data-p]');
+      if (btn) location.search = 'players=' + btn.dataset.p;
+    });
+  }
   document.body.classList.add('players-' + PLAYERS);
 
   /* 우클릭 및 롱프레스 컨텍스트 메뉴 차단 */

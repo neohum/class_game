@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const p3Radio = document.getElementById('p3');
     const p3Label = document.getElementById('label-p3');
     const p2Radio = document.getElementById('p2');
+    const p6Radio = document.getElementById('p6');
+    const p6Label = document.getElementById('label-p6');
     
     // Settings
     let gameSize = 10;
@@ -44,13 +46,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 p3Radio.disabled = true;
                 p3Label.style.opacity = '0.5';
                 p3Label.style.cursor = 'not-allowed';
-                if (p3Radio.checked) {
+                p6Radio.disabled = true;
+                p6Label.style.opacity = '0.5';
+                p6Label.style.cursor = 'not-allowed';
+                if (p3Radio.checked || p6Radio.checked) {
                     p2Radio.checked = true;
                 }
             } else {
                 p3Radio.disabled = false;
                 p3Label.style.opacity = '1';
                 p3Label.style.cursor = 'pointer';
+                p6Radio.disabled = false;
+                p6Label.style.opacity = '1';
+                p6Label.style.cursor = 'pointer';
             }
         });
     });

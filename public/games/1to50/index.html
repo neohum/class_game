@@ -199,7 +199,7 @@
   function createGame(root, index) {
     root.className = 'game';
     root.innerHTML = `
-      <h2>PLAYER ${index + 1} · 1 <span>to</span> 50</h2>
+      <h2>${PLAYERS === 1 ? '' : 'PLAYER ' + (index + 1) + ' · '}1 <span>to</span> 50</h2>
       <div class="hud">
         <div class="box"><div class="label">다음</div><div class="value next">1</div></div>
         <div class="box"><div class="label">시간</div><div class="value time">0.00</div></div>
@@ -341,8 +341,26 @@
     buildBoard(); /* 시작 전 미리보기용 보드 */
   }
 
+  /* ?players=N (1~6): 지정하지 않으면 인원수 선택 화면부터 */
+  const PLAYERS = Math.max(1, Math.min(6, parseInt(new URLSearchParams(location.search).get('players'), 10) || 4));
+
+  /* ?players= 없이 열면 인원수 선택(1·2·6인용)부터 — 고르면 그 인원으로 다시 연다 */
+  if (!new URLSearchParams(location.search).has('players')) {
+    const sel = document.createElement('div');
+    sel.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:14px;padding:0 16px 6vh;background:rgba(15,23,42,0.97);color:#e2e8f0;';
+    sel.innerHTML = '<div style="font-size:clamp(1.3rem,3vw,2.2rem);font-weight:800;">몇 명이서 할까요?</div>'
+      + '<div style="display:flex;gap:12px;width:100%;max-width:720px;">'
+      + [1, 2, 6].map(n => '<button data-p="' + n + '" style="flex:1;border:none;border-radius:14px;background:#38bdf8;color:#0f172a;font-family:inherit;font-weight:800;font-size:clamp(1rem,2.4vw,1.6rem);padding:clamp(14px,3vh,26px) 4px;cursor:pointer;touch-action:none;">' + n + '인용</button>').join('')
+      + '</div>';
+    document.body.appendChild(sel);
+    sel.addEventListener('pointerdown', e => {
+      const btn = e.target.closest('[data-p]');
+      if (btn) location.search = 'players=' + btn.dataset.p;
+    });
+  }
+
   const container = document.getElementById('games');
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < PLAYERS; i++) {
     const panel = document.createElement('div');
     container.appendChild(panel);
     createGame(panel, i);

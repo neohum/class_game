@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3·10고개 × 4</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --tile: #38bdf8;
+    --tile-hover: #7dd3fc;
+    --text-dark: #0f172a;
+    --text-light: #e2e8f0;
+    --accent: #34d399;
+    --wrong: #f87171;
+    --gold: #fbbf24;
+    --purple: #a78bfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;      /* 스크롤/줌 제스처 판정 지연 제거 → 터치 즉시 반응 */
+    overflow: hidden;
+  }
+  #games {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  /* 5~6인: 패널이 좁아지므로 여백·글자를 살짝 줄인다 */
+  body.many #games { gap: 5px; padding: 5px; }
+  body.many .game { padding: 6px; border-radius: 10px; }
+  body.many .game h2 { font-size: 0.68rem; letter-spacing: 0.5px; }
+  body.many .hud { gap: 4px; }
+  body.many .hud .box { padding: 2px 4px; }
+  body.many .bigbtn { font-size: clamp(0.75rem, 1.35vw, 1rem); }
+  body.many .choice { font-size: clamp(0.75rem, 1.4vw, 1.05rem); }
+  body.many .hint { font-size: clamp(0.7rem, 1.2vw, 0.95rem); }
+  body.many .overlay .sub { font-size: 0.7rem; }
+  .game {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .game h2 {
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    text-align: center;
+  }
+  .game h2 span { color: var(--tile); }
+  .hud {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 5px;
+  }
+  .hud .box {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    padding: 3px 8px;
+    text-align: center;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 100px;
+  }
+  .hud .label { font-size: 0.6rem; color: #94a3b8; white-space: nowrap; }
+  .hud .value {
+    font-size: clamp(0.85rem, 1.5vw, 1.2rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .hud .value.score { color: var(--gold); }
+  .hud .value.ok { color: var(--accent); }
+  .hud .value.miss { color: var(--wrong); }
+
+  /* 조작 요소(버튼)는 전부 패널 하단에 밀착 */
+  .play {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 7px;
+    min-height: 0;
+  }
+  .qhead {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+  }
+  .catbadge {
+    background: var(--accent);
+    color: var(--text-dark);
+    border-radius: 999px;
+    padding: 3px 14px;
+    font-size: clamp(0.75rem, 1.4vw, 1rem);
+    font-weight: 800;
+  }
+  .modebadge {
+    background: var(--purple);
+    color: var(--text-dark);
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: clamp(0.75rem, 1.4vw, 1rem);
+    font-weight: 800;
+  }
+  .modebadge.hidden { display: none; }
+  .hints {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 12px;
+    width: 100%;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    max-height: 46vh;
+  }
+  .hints .empty {
+    color: #64748b;
+    text-align: center;
+    font-size: clamp(0.75rem, 1.4vw, 1rem);
+    padding: 10px 0;
+    line-height: 1.5;
+  }
+  .hint {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    font-size: clamp(0.75rem, 1.5vw, 1.05rem);
+    line-height: 1.35;
+    color: #cbd5e1;
+  }
+  .hint .no {
+    flex-shrink: 0;
+    color: var(--tile);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .hint.latest { color: #fff; font-weight: 700; }
+  .hint.latest .no { color: var(--gold); }
+  .hint.pop { animation: pop 0.2s; }
+  @keyframes pop {
+    0% { transform: scale(0.94); opacity: 0.3; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  /* 정답 공개 박스 */
+  .reveal {
+    background: rgba(15, 23, 42, 0.85);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    text-align: center;
+    padding: 8px 6px;
+    font-size: clamp(0.85rem, 1.7vw, 1.2rem);
+    font-weight: 800;
+  }
+  .reveal.hidden { display: none; }
+  .reveal .ans { color: var(--gold); font-size: clamp(1.1rem, 2.4vw, 1.7rem); }
+
+  /* ── 하단 조작 영역 ── */
+  .ctrl { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+  .ctrl.hidden { display: none; }
+  .bigbtn {
+    border: none;
+    border-radius: 12px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: clamp(0.85rem, 1.7vw, 1.15rem);
+    padding: clamp(10px, 1.8vh, 16px) 4px;
+    cursor: pointer;
+    touch-action: none;
+    color: var(--text-dark);
+    line-height: 1.3;
+  }
+  .bigbtn small { display: block; font-weight: 700; font-size: 0.72em; opacity: 0.75; }
+  .mode3 { background: var(--gold); }
+  .mode3:hover { background: #fcd34d; }
+  .mode10 { background: var(--tile); }
+  .mode10:hover { background: var(--tile-hover); }
+  .next { background: var(--tile); }
+  .next:hover { background: var(--tile-hover); }
+  .next:disabled { background: #334155; color: #64748b; cursor: default; }
+  .try { background: var(--accent); }
+  .try:hover { background: #6ee7b7; }
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    width: 100%;
+  }
+  .choice {
+    border: none;
+    border-radius: 10px;
+    background: var(--tile);
+    color: var(--text-dark);
+    font-size: clamp(0.85rem, 1.8vw, 1.3rem);
+    font-weight: 800;
+    font-family: inherit;
+    padding: clamp(8px, 1.6vh, 15px) 2px;
+    cursor: pointer;
+    touch-action: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .choice:hover { background: var(--tile-hover); }
+  .choice:disabled { cursor: default; opacity: 0.45; }
+  .choice.good { background: var(--accent); opacity: 1; animation: pop 0.25s; }
+  .choice.bad { background: var(--wrong); opacity: 1; animation: shake 0.25s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .back {
+    border: none;
+    border-radius: 10px;
+    background: #475569;
+    color: var(--text-light);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: clamp(0.75rem, 1.4vw, 1rem);
+    padding: clamp(7px, 1.3vh, 12px) 4px;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .back:hover { background: #64748b; }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;   /* 시작 버튼도 하단에 밀착 */
+    gap: 10px;
+    padding: 16px 10px 24px;
+    backdrop-filter: blur(3px);
+    border-radius: 14px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none !important; }
+  .overlay .title { font-size: clamp(1.1rem, 2.2vw, 1.8rem); font-weight: 800; }
+  .overlay .sub { color: #94a3b8; font-size: 0.8rem; text-align: center; line-height: 1.55; }
+  .overlay .big {
+    background: var(--accent);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 32px;
+    font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .overlay .tap { color: #64748b; font-size: 0.75rem; }
+  .toast {
+    position: absolute;
+    left: 50%;
+    top: 12%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.9);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    font-weight: 800;
+    white-space: nowrap;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .toast.show { opacity: 1; }
+  .toast.good { color: var(--accent); }
+  .toast.info { color: var(--gold); }
+  .toast.bad { color: var(--wrong); }
+</style>
+</head>
+<body>
+
+<div id="games"></div>
+
+<script>
+(() => {
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  /* 힌트는 어려운(두루뭉술한) 것 → 쉬운(구체적인) 것 순서.
+     3고개는 앞의 3개만 볼 수 있어 어렵고, 그만큼 점수가 높다. */
+  const ITEMS = [
+    { cat: '동물', answer: '코끼리',
+      hints: ['살아 있는 것이에요','다리가 네 개예요','몸이 아주 커요','풀을 먹어요','회색이에요','귀가 아주 넓적해요','동물원에서 볼 수 있어요','상아라는 큰 이빨이 있어요','코로 물을 뿜어요','코가 아주 길어요'],
+      decoys: ['하마','코뿔소','기린','곰','물소'] },
+    { cat: '동물', answer: '펭귄',
+      hints: ['살아 있는 것이에요','알을 낳아요','새예요','날지 못해요','헤엄을 아주 잘 쳐요','추운 곳에 살아요','까만색과 하얀색이에요','뒤뚱뒤뚱 걸어요','남극에 살아요','턱시도를 입은 것 같아요'],
+      decoys: ['갈매기','오리','타조','물개','백조'] },
+    { cat: '동물', answer: '토끼',
+      hints: ['살아 있는 것이에요','다리가 네 개예요','털이 보들보들해요','풀을 먹어요','몸집이 작고 귀여워요','깡충깡충 뛰어요','앞니가 커요','당근을 좋아해요','꼬리가 짧고 동그래요','귀가 아주 길어요'],
+      decoys: ['다람쥐','햄스터','고양이','강아지','사슴'] },
+    { cat: '동물', answer: '기린',
+      hints: ['살아 있는 것이에요','다리가 네 개예요','풀과 나뭇잎을 먹어요','아프리카에 살아요','키가 아주 커요','몸에 그물 같은 무늬가 있어요','노란색과 갈색이에요','높은 나무의 잎을 따 먹어요','동물 중에 키가 제일 커요','목이 아주 길어요'],
+      decoys: ['코끼리','얼룩말','사슴','낙타','타조'] },
+    { cat: '과일', answer: '수박',
+      hints: ['먹는 것이에요','달콤해요','여름에 많이 먹어요','시원하게 먹으면 더 맛있어요','둥글어요','아주 크고 무거워요','겉은 초록색이에요','까만 씨가 있어요','겉에 줄무늬가 있어요','속은 빨간색이에요'],
+      decoys: ['멜론','참외','호박','사과','포도'] },
+    { cat: '과일', answer: '바나나',
+      hints: ['먹는 것이에요','과일이에요','달콤해요','속이 부드러워요','껍질을 벗겨 먹어요','원숭이가 좋아해요','길쭉해요','한 송이에 여러 개 붙어 있어요','살짝 휘어져 있어요','껍질이 노란색이에요'],
+      decoys: ['참외','옥수수','오이','망고','파인애플'] },
+    { cat: '과일', answer: '딸기',
+      hints: ['먹는 것이에요','달콤하고 새콤해요','한 입 크기로 작아요','봄에 많이 먹어요','케이크 위에 자주 올라가요','겉에 작은 씨가 콕콕 박혀 있어요','꼭지가 초록색이에요','잼으로 많이 만들어요','뾰족한 세모 모양에 가까워요','빨간색이에요'],
+      decoys: ['체리','사과','토마토','산딸기','앵두'] },
+    { cat: '학용품', answer: '연필',
+      hints: ['학교에서 써요','필통에 들어가요','길쭉해요','나무로 만들어요','깎아서 써요','쓰다 보면 점점 짧아져요','지우개로 지울 수 있어요','심이 부러지기도 해요','속에 까만 심이 있어요','글씨를 쓰는 도구예요'],
+      decoys: ['볼펜','색연필','크레파스','샤프','붓'] },
+    { cat: '학용품', answer: '지우개',
+      hints: ['학교에서 써요','필통에 들어가요','크기가 작아요','말랑말랑해요','문지르면 가루가 나와요','연필과 짝꿍이에요','네모난 것이 많아요','쓰면 점점 작아져요','틀린 글씨를 없애 줘요','연필 글씨를 지워요'],
+      decoys: ['연필','자','풀','가위','필통'] },
+    { cat: '학용품', answer: '가위',
+      hints: ['집과 학교에 있어요','손으로 잡고 쓰는 도구예요','날카로우니 조심해야 해요','쇠로 만든 부분이 있어요','손가락을 끼워서 써요','날이 두 개예요','색종이 접기 할 때 필요해요','싹둑싹둑 소리가 나요','벌렸다 오므렸다 하며 써요','종이를 자를 때 써요'],
+      decoys: ['칼','풀','자','집게','바늘'] },
+    { cat: '탈것', answer: '버스',
+      hints: ['타는 것이에요','바퀴가 있어요','도로에서 다녀요','사람이 많이 탈 수 있어요','운전기사님이 운전해요','정해진 길로만 다녀요','카드를 찍고 타요','번호가 붙어 있어요','정류장에서 기다렸다 타요','길고 큰 네모난 자동차예요'],
+      decoys: ['지하철','택시','기차','트럭','승용차'] },
+    { cat: '탈것', answer: '소방차',
+      hints: ['타는 것이에요','바퀴가 있어요','특별한 일을 하는 차예요','사이렌을 울리며 달려요','빨간색이에요','긴 사다리가 달려 있어요','물을 뿜을 수 있어요','긴 호스가 실려 있어요','119에 전화하면 와요','불을 끄러 가요'],
+      decoys: ['구급차','경찰차','트럭','버스','청소차'] },
+    { cat: '탈것', answer: '비행기',
+      hints: ['타는 것이에요','멀리 갈 때 타요','아주 커요','아주 빨라요','안에서 밥도 먹을 수 있어요','공항에서 타요','큰 날개가 있어요','조종사가 운전해요','구름 위로 올라가요','하늘을 날아요'],
+      decoys: ['헬리콥터','로켓','기차','배','열기구'] },
+    { cat: '직업', answer: '의사',
+      hints: ['직업이에요','사람을 도와줘요','병원에서 일해요','하얀 가운을 입어요','청진기를 목에 걸어요','주사를 놓기도 해요','어디가 아픈지 물어봐요','약을 지어 주라고 처방해요','아픈 곳을 진찰해요','병을 고쳐 줘요'],
+      decoys: ['간호사','약사','수의사','치과의사','과학자'] },
+    { cat: '직업', answer: '소방관',
+      hints: ['직업이에요','사람을 도와줘요','아주 용감해요','위험한 곳에 가요','두꺼운 특별한 옷을 입어요','헬멧을 써요','소방서에서 일해요','높은 사다리를 타요','호스로 물을 뿌려요','불을 꺼요'],
+      decoys: ['경찰관','군인','구조대원','의사','우주비행사'] },
+    { cat: '자연', answer: '무지개',
+      hints: ['하늘에서 볼 수 있어요','만질 수 없어요','아주 예뻐요','가끔씩만 나타나요','비가 온 뒤에 나와요','해가 있어야 보여요','둥근 다리 모양이에요','일곱 가지 색이에요','빨주노초파남보!','비 온 뒤 하늘에 뜨는 색깔 다리예요'],
+      decoys: ['구름','노을','번개','별','달'] },
+    { cat: '자연', answer: '달',
+      hints: ['하늘에서 볼 수 있어요','아주 멀리 있어요','만질 수 없어요','밤에 잘 보여요','날마다 모양이 변해요','보름달, 초승달이 있어요','토끼가 산다는 옛날이야기가 있어요','우주에 있어요','지구 주위를 돌아요','밤하늘에서 가장 크고 밝아요'],
+      decoys: ['해','별','지구','구름','화성'] },
+    { cat: '겨울', answer: '눈사람',
+      hints: ['겨울에 볼 수 있어요','차가워요','하얀색이에요','밖에서 만들어요','해가 나면 녹아요','동그라미 두 개를 쌓아요','눈을 굴려서 만들어요','나뭇가지로 팔을 만들어요','당근으로 코를 만들기도 해요','눈으로 만든 사람 모양이에요'],
+      decoys: ['눈송이','얼음','이글루','인형','허수아비'] },
+    { cat: '음식', answer: '피자',
+      hints: ['먹는 것이에요','따뜻할 때 맛있어요','여럿이 나눠 먹어요','동그란 모양이 많아요','조각으로 잘라 먹어요','이탈리아에서 온 음식이에요','빵 위에 여러 가지를 올려요','치즈가 쭉 늘어나요','오븐에 구워요','세모 조각으로 먹는 둥근 음식이에요'],
+      decoys: ['햄버거','스파게티','핫도그','토스트','파이'] },
+    { cat: '음식', answer: '김밥',
+      hints: ['먹는 것이에요','한국 음식이에요','소풍 갈 때 많이 가져가요','길쭉해요','동글동글 썰어서 먹어요','밥으로 만들어요','안에 여러 재료가 들어가요','까만 김으로 감싸요','돌돌 말아서 만들어요','김에 밥을 말아 만든 음식이에요'],
+      decoys: ['주먹밥','초밥','떡볶이','유부초밥','샌드위치'] },
+  ];
+
+  /* 모드별 점수: 힌트를 적게 보고 맞힐수록 높다 */
+  const MODES = {
+    3:  { max: 3,  base: 150, step: 25 },  /* 150 → 125 → 100 */
+    10: { max: 10, base: 100, step: 10 },  /* 100 → 90 → … → 10 */
+  };
+  const potential = (mode, revealed) => MODES[mode].base - (revealed - 1) * MODES[mode].step;
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function createGame(root, index) {
+    root.className = 'game';
+    root.innerHTML = `
+      <div class="toast"></div>
+      <h2>PLAYER ${index + 1} · <span>3·10고개</span></h2>
+      <div class="hud">
+        <div class="box"><div class="label">점수</div><div class="value score">0</div></div>
+        <div class="box"><div class="label">맞힘</div><div class="value ok">0</div></div>
+        <div class="box"><div class="label">틀림</div><div class="value miss">0</div></div>
+      </div>
+      <div class="play">
+        <div class="qhead">
+          <div class="catbadge">카테고리</div>
+          <div class="modebadge hidden"></div>
+        </div>
+        <div class="hints"></div>
+        <div class="reveal hidden"></div>
+        <div class="ctrl mode-ctrl">
+          <button class="bigbtn mode3">3고개 도전<small>힌트 3개만! 최고 150점</small></button>
+          <button class="bigbtn mode10">10고개 도전<small>힌트 10개까지, 최고 100점</small></button>
+        </div>
+        <div class="ctrl hint-ctrl hidden">
+          <button class="bigbtn next">다음 힌트</button>
+          <button class="bigbtn try">답에 도전!</button>
+        </div>
+        <div class="ctrl choice-ctrl hidden">
+          <div class="choices"></div>
+          <button class="back">← 힌트 더 보기</button>
+        </div>
+      </div>
+      <div class="overlay">
+        <div class="title">3·10고개</div>
+        <div class="sub">힌트를 보고 무엇인지 맞혀 보세요!<br>힌트를 적게 보고 맞힐수록 점수가 커요.<br>3고개는 어렵지만 점수가 더 높아요!</div>
+        <button class="big">게임 시작</button>
+        <div class="tap">화면 아무 곳이나 터치해도 시작</div>
+      </div>`;
+
+    const toastEl = root.querySelector('.toast');
+    const scoreEl = root.querySelector('.value.score');
+    const okEl = root.querySelector('.value.ok');
+    const missEl = root.querySelector('.value.miss');
+    const catEl = root.querySelector('.catbadge');
+    const modeBadgeEl = root.querySelector('.modebadge');
+    const hintsEl = root.querySelector('.hints');
+    const revealEl = root.querySelector('.reveal');
+    const modeCtrl = root.querySelector('.mode-ctrl');
+    const hintCtrl = root.querySelector('.hint-ctrl');
+    const choiceCtrl = root.querySelector('.choice-ctrl');
+    const nextBtn = root.querySelector('.next');
+    const tryBtn = root.querySelector('.try');
+    const choicesEl = root.querySelector('.choices');
+    const overlay = root.querySelector('.overlay');
+
+    let item = null;       /* 현재 문제 */
+    let mode = 0;          /* 3 | 10 */
+    let revealed = 0;      /* 공개된 힌트 수 */
+    let score = 0;
+    let okCount = 0;
+    let missCount = 0;
+    let locked = true;     /* 정답/오답 연출 중 입력 잠금 */
+    let toastId = null;
+
+    function showToast(text, kind) {
+      toastEl.textContent = text;
+      toastEl.className = 'toast show ' + kind;
+      clearTimeout(toastId);
+      toastId = setTimeout(() => toastEl.classList.remove('show'), 1000);
+    }
+
+    function showCtrl(which) {
+      modeCtrl.classList.toggle('hidden', which !== 'mode');
+      hintCtrl.classList.toggle('hidden', which !== 'hint');
+      choiceCtrl.classList.toggle('hidden', which !== 'choice');
+    }
+
+    function renderHints() {
+      hintsEl.innerHTML = '';
+      if (revealed === 0) {
+        hintsEl.innerHTML = '<div class="empty">3고개? 10고개?<br>도전할 고개를 골라 보세요!</div>';
+        return;
+      }
+      for (let i = 0; i < revealed; i++) {
+        const row = document.createElement('div');
+        row.className = 'hint' + (i === revealed - 1 ? ' latest pop' : '');
+        row.innerHTML = `<span class="no">${i + 1}고개</span><span></span>`;
+        row.lastElementChild.textContent = item.hints[i];
+        hintsEl.appendChild(row);
+      }
+      hintsEl.scrollTop = hintsEl.scrollHeight;
+    }
+
+    function updateButtons() {
+      const m = MODES[mode];
+      nextBtn.disabled = revealed >= m.max;
+      nextBtn.textContent = revealed >= m.max ? '힌트 끝!' : `다음 힌트 (${revealed}/${m.max})`;
+      tryBtn.innerHTML = `답에 도전!<small>맞히면 +${potential(mode, revealed)}점</small>`;
+    }
+
+    function newProblem() {
+      let next;
+      do { next = ITEMS[Math.floor(Math.random() * ITEMS.length)]; } while (item && next.answer === item.answer);
+      item = next;
+      mode = 0;
+      revealed = 0;
+      catEl.textContent = item.cat;
+      modeBadgeEl.classList.add('hidden');
+      revealEl.classList.add('hidden');
+      renderHints();
+      showCtrl('mode');
+      locked = false;
+    }
+
+    function selectMode(m) {
+      mode = m;
+      modeBadgeEl.textContent = m + '고개';
+      modeBadgeEl.classList.remove('hidden');
+      revealed = 1;             /* 첫 힌트는 바로 공개 */
+      renderHints();
+      updateButtons();
+      showCtrl('hint');
+    }
+
+    function nextHint() {
+      if (revealed >= MODES[mode].max) return;
+      revealed++;
+      renderHints();
+      updateButtons();
+    }
+
+    function openChoices() {
+      choicesEl.innerHTML = '';
+      for (const word of shuffle([item.answer, ...item.decoys])) {
+        const btn = document.createElement('button');
+        btn.className = 'choice';
+        btn.textContent = word;
+        choicesEl.appendChild(btn);
+      }
+      showCtrl('choice');
+    }
+
+    function pick(btn) {
+      locked = true;
+      const correct = btn.textContent === item.answer;
+      [...choicesEl.children].forEach(b => {
+        b.disabled = true;
+        if (b.textContent === item.answer) b.classList.add('good');
+      });
+      if (correct) {
+        const pts = potential(mode, revealed);
+        score += pts;
+        okCount++;
+        scoreEl.textContent = score;
+        okEl.textContent = okCount;
+        showToast(`정답! +${pts}점 🎉`, 'good');
+        setTimeout(newProblem, 1000);
+      } else {
+        btn.classList.add('bad');
+        missCount++;
+        missEl.textContent = missCount;
+        revealEl.innerHTML = '정답은 <span class="ans"></span> 였어요!';
+        revealEl.querySelector('.ans').textContent = item.answer;
+        revealEl.classList.remove('hidden');
+        showToast('아쉬워요! 😢', 'bad');
+        setTimeout(newProblem, 1500);
+      }
+    }
+
+    /* pointerdown 위임: 4명이 동시에 눌러도 포인터마다 독립 처리 */
+    root.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (locked) return;
+      const choice = e.target.closest('.choice');
+      if (choice) { e.preventDefault(); if (!choice.disabled) pick(choice); return; }
+      if (e.target.closest('.mode3')) { e.preventDefault(); selectMode(3); return; }
+      if (e.target.closest('.mode10')) { e.preventDefault(); selectMode(10); return; }
+      if (e.target.closest('.next')) { e.preventDefault(); nextHint(); return; }
+      if (e.target.closest('.try')) { e.preventDefault(); openChoices(); return; }
+      if (e.target.closest('.back')) { e.preventDefault(); updateButtons(); showCtrl('hint'); return; }
+    });
+
+    overlay.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation(); /* 아래 패널 리스너로 전파 방지 */
+      overlay.classList.add('hidden');
+      score = 0; okCount = 0; missCount = 0;
+      scoreEl.textContent = '0';
+      okEl.textContent = '0';
+      missEl.textContent = '0';
+      newProblem();
+    });
+  }
+
+  /* ?players=N (1~6): 기본 6인. 좁은 iframe(허브)에서는 players=1로 로드 */
+  const PLAYERS = Math.max(1, Math.min(6, parseInt(new URLSearchParams(location.search).get('players'), 10) || 6));
+  if (PLAYERS >= 5) document.body.classList.add('many');
+  document.title = `3·10고개 × ${PLAYERS}`;
+
+  const container = document.getElementById('games');
+  for (let i = 0; i < PLAYERS; i++) {
+    const panel = document.createElement('div');
+    container.appendChild(panel);
+    createGame(panel, i);
+  }
+})();
+</script>
+</body>
+</html>

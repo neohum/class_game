@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>초성퀴즈 × 4</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --tile: #38bdf8;
+    --tile-hover: #7dd3fc;
+    --text-dark: #0f172a;
+    --text-light: #e2e8f0;
+    --accent: #34d399;
+    --wrong: #f87171;
+    --chosung: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;      /* 스크롤/줌 제스처 판정 지연 제거 → 터치 즉시 반응 */
+    overflow: hidden;
+  }
+  #games {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  .game {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    overflow: hidden;
+  }
+  /* 플레이 영역 전체를 패널 바닥에 밀착 */
+  .play {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 7px;
+  }
+  .game h2 {
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    color: #94a3b8;
+  }
+  .game h2 span { color: var(--tile); }
+  .hud {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    width: 100%;
+    justify-content: center;
+  }
+  .hud .box {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    padding: 4px 8px;
+    text-align: center;
+    min-width: 0;
+    flex: 1 1 0;
+    max-width: 100px;
+  }
+  .hud .label {
+    font-size: 0.6rem;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .hud .value {
+    font-size: clamp(0.85rem, 1.5vw, 1.2rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .hud .value.ok { color: var(--accent); }
+  .hud .value.miss { color: var(--wrong); }
+  .qbox {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 12px;
+    width: 100%;
+    padding: 8px 6px 10px;
+    text-align: center;
+  }
+  .catbadge {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--text-dark);
+    border-radius: 999px;
+    padding: 3px 14px;
+    font-size: clamp(0.75rem, 1.4vw, 1rem);
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .chosung {
+    font-size: clamp(1.7rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: var(--chosung);
+    line-height: 1.15;
+  }
+  .qbox.pop { animation: pop 0.2s; }
+  @keyframes pop {
+    0% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+  }
+  .slots {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    width: 100%;
+  }
+  .slot {
+    width: clamp(34px, 4.5vw, 56px);
+    aspect-ratio: 1;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px dashed #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1.1rem, 2.4vw, 1.8rem);
+    font-weight: 800;
+  }
+  .slot.filled { border-style: solid; border-color: var(--tile); }
+  .slots.good .slot { border-color: var(--accent); background: rgba(52, 211, 153, 0.25); }
+  .slots.bad { animation: shake 0.25s; }
+  .slots.bad .slot { border-color: var(--wrong); background: rgba(248, 113, 113, 0.25); }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: 100%;
+  }
+  .tile {
+    border: none;
+    border-radius: 10px;
+    background: var(--tile);
+    color: var(--text-dark);
+    font-size: clamp(1rem, 2.2vw, 1.6rem);
+    font-weight: 800;
+    font-family: inherit;
+    padding: clamp(8px, 1.6vh, 16px) 2px;
+    cursor: pointer;
+    touch-action: none;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .tile:hover { background: var(--tile-hover); }
+  .tile:disabled {
+    background: #334155;
+    color: #64748b;
+    cursor: default;
+  }
+  .ctrl {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+  .ctrl button {
+    flex: 1 1 0;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: clamp(0.8rem, 1.5vw, 1.05rem);
+    padding: clamp(7px, 1.3vh, 12px) 4px;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .ctrl .erase { background: #475569; color: var(--text-light); }
+  .ctrl .erase:hover { background: #64748b; }
+  .ctrl .pass { background: var(--chosung); color: var(--text-dark); }
+  .ctrl .pass:hover { background: #fcd34d; }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;   /* 오버레이 내용도 아래쪽에 밀착 */
+    gap: 10px;
+    padding: 16px 10px 24px;
+    backdrop-filter: blur(3px);
+    border-radius: 14px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none !important; }
+  .overlay .title { font-size: clamp(1.1rem, 2.2vw, 1.8rem); font-weight: 800; }
+  .overlay .sub { color: #94a3b8; font-size: 0.85rem; text-align: center; line-height: 1.5; }
+  .overlay .big {
+    background: var(--accent);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 32px;
+    font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .overlay .tap { color: #64748b; font-size: 0.75rem; }
+  /* 정답/패스 안내 토스트 */
+  .toast {
+    position: absolute;
+    left: 50%;
+    top: 12%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.9);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    font-weight: 800;
+    white-space: nowrap;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .toast.show { opacity: 1; }
+  .toast.good { color: var(--accent); }
+  .toast.info { color: var(--chosung); }
+</style>
+</head>
+<body>
+
+<div id="games"></div>
+
+<script>
+(() => {
+  const PAD_SIZE = 9; /* 글자 입력판 타일 수 (3×3) */
+
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  const CATEGORIES = {
+    '물고기': ['상어','고등어','갈치','참치','연어','붕어','잉어','멸치','꽁치','넙치','가오리','복어','미꾸라지','송사리','금붕어','조기','명태','광어','우럭','전어'],
+    '새': ['참새','비둘기','까치','까마귀','독수리','부엉이','올빼미','제비','갈매기','딱따구리','앵무새','공작','타조','펭귄','백조','오리','두루미','기러기','꾀꼬리','병아리'],
+    '동물': ['호랑이','사자','코끼리','기린','얼룩말','원숭이','토끼','여우','늑대','고슴도치','판다','다람쥐','너구리','하마','악어','캥거루','코알라','사슴','돼지','고양이'],
+    '채소': ['당근','오이','감자','고구마','양파','마늘','배추','상추','시금치','브로콜리','가지','호박','콩나물','버섯','고추','피망','옥수수','토마토','깻잎','미나리'],
+    '과일': ['사과','포도','딸기','수박','참외','복숭아','바나나','오렌지','키위','파인애플','망고','체리','자두','블루베리','멜론','살구','석류','앵두','귤','레몬'],
+  };
+  /* {cat, word} 전체 목록 — 매 문제 여기서 랜덤 출제 */
+  const ALL = Object.entries(CATEGORIES).flatMap(([cat, words]) => words.map(w => ({ cat, word: w })));
+
+  const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  function toChosung(word) {
+    let out = '';
+    for (const ch of word) {
+      const code = ch.charCodeAt(0) - 0xAC00;
+      out += (code >= 0 && code < 11172) ? CHO[Math.floor(code / 588)] : ch;
+    }
+    return out;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  /* 입력판 타일: 정답 음절(중복 포함) + 같은 카테고리 다른 단어의 음절로 채움 */
+  function buildTiles(item) {
+    const answerChars = [...item.word];
+    const used = new Set(answerChars);
+    const decoyPool = [];
+    for (const w of CATEGORIES[item.cat]) {
+      if (w === item.word) continue;
+      for (const ch of w) {
+        if (!used.has(ch)) { used.add(ch); decoyPool.push(ch); }
+      }
+    }
+    shuffle(decoyPool);
+    return shuffle([...answerChars, ...decoyPool.slice(0, PAD_SIZE - answerChars.length)]);
+  }
+
+  function createGame(root, index) {
+    root.className = 'game';
+    root.innerHTML = `
+      <div class="toast"></div>
+      <div class="play">
+        <h2>PLAYER ${index + 1} · <span>초성퀴즈</span></h2>
+        <div class="hud">
+          <div class="box"><div class="label">맞힘</div><div class="value ok">0</div></div>
+          <div class="box"><div class="label">틀림</div><div class="value miss">0</div></div>
+        </div>
+        <div class="qbox">
+          <div class="catbadge">카테고리</div>
+          <div class="chosung">ㅊㅅ ㅋㅈ</div>
+        </div>
+        <div class="slots"></div>
+        <div class="pad"></div>
+        <div class="ctrl">
+          <button class="erase">← 지우기</button>
+          <button class="pass">패스</button>
+        </div>
+      </div>
+      <div class="overlay">
+        <div class="title">초성퀴즈</div>
+        <div class="sub">카테고리를 보고 초성에 맞는 단어를<br>글자판으로 입력하세요!</div>
+        <button class="big">게임 시작</button>
+        <div class="tap">화면 아무 곳이나 터치해도 시작</div>
+      </div>`;
+
+    const toastEl = root.querySelector('.toast');
+    const okEl = root.querySelector('.value.ok');
+    const missEl = root.querySelector('.value.miss');
+    const qboxEl = root.querySelector('.qbox');
+    const catEl = root.querySelector('.catbadge');
+    const chosungEl = root.querySelector('.chosung');
+    const slotsEl = root.querySelector('.slots');
+    const padEl = root.querySelector('.pad');
+    const eraseBtn = root.querySelector('.erase');
+    const passBtn = root.querySelector('.pass');
+    const overlay = root.querySelector('.overlay');
+
+    let item = null;        /* 현재 문제 {cat, word} */
+    let typed = [];         /* [{char, tileBtn}] 입력 순서대로 */
+    let okCount = 0;
+    let missCount = 0;
+    let locked = true;      /* 정답/오답 연출 중 입력 잠금 */
+    let toastId = null;
+
+    function showToast(text, kind) {
+      toastEl.textContent = text;
+      toastEl.className = 'toast show ' + kind;
+      clearTimeout(toastId);
+      toastId = setTimeout(() => toastEl.classList.remove('show'), 800);
+    }
+
+    function renderSlots() {
+      [...slotsEl.children].forEach((slot, i) => {
+        slot.textContent = typed[i] ? typed[i].char : '';
+        slot.classList.toggle('filled', !!typed[i]);
+      });
+    }
+
+    function newQuestion() {
+      let next;
+      do { next = ALL[Math.floor(Math.random() * ALL.length)]; } while (item && next.word === item.word);
+      item = next;
+      typed = [];
+
+      catEl.textContent = item.cat;
+      chosungEl.textContent = toChosung(item.word);
+      qboxEl.classList.remove('pop');
+      void qboxEl.offsetWidth;
+      qboxEl.classList.add('pop');
+
+      slotsEl.className = 'slots';
+      slotsEl.innerHTML = '';
+      for (let i = 0; i < item.word.length; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slotsEl.appendChild(slot);
+      }
+
+      padEl.innerHTML = '';
+      for (const ch of buildTiles(item)) {
+        const btn = document.createElement('button');
+        btn.className = 'tile';
+        btn.textContent = ch;
+        padEl.appendChild(btn);
+      }
+      locked = false;
+    }
+
+    function check() {
+      locked = true;
+      const answer = typed.map(t => t.char).join('');
+      if (answer === item.word) {
+        okCount++;
+        okEl.textContent = okCount;
+        slotsEl.classList.add('good');
+        showToast('정답! 🎉', 'good');
+        setTimeout(newQuestion, 500);
+      } else {
+        missCount++;
+        missEl.textContent = missCount;
+        slotsEl.classList.add('bad');
+        setTimeout(() => {
+          slotsEl.classList.remove('bad');
+          typed.forEach(t => { t.tileBtn.disabled = false; });
+          typed = [];
+          renderSlots();
+          locked = false;
+        }, 400);
+      }
+    }
+
+    function onTile(btn) {
+      if (locked || btn.disabled) return;
+      btn.disabled = true;
+      typed.push({ char: btn.textContent, tileBtn: btn });
+      renderSlots();
+      if (typed.length === item.word.length) check();
+    }
+
+    function onErase() {
+      if (locked || typed.length === 0) return;
+      const last = typed.pop();
+      last.tileBtn.disabled = false;
+      renderSlots();
+    }
+
+    function onPass() {
+      if (locked) return;
+      locked = true;
+      missCount++;
+      missEl.textContent = missCount;
+      showToast('정답: ' + item.word, 'info');
+      setTimeout(newQuestion, 900);
+    }
+
+    /* pointerdown 위임: 4명이 동시에 눌러도 포인터마다 독립 처리 */
+    root.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const tile = e.target.closest('.tile');
+      if (tile) { e.preventDefault(); onTile(tile); return; }
+      if (e.target.closest('.erase')) { e.preventDefault(); onErase(); return; }
+      if (e.target.closest('.pass')) { e.preventDefault(); onPass(); return; }
+    });
+
+    overlay.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation(); /* 아래 패널 리스너로 전파 방지 */
+      overlay.classList.add('hidden');
+      okCount = 0;
+      missCount = 0;
+      okEl.textContent = '0';
+      missEl.textContent = '0';
+      newQuestion();
+    });
+  }
+
+  const container = document.getElementById('games');
+  for (let i = 0; i < 4; i++) {
+    const panel = document.createElement('div');
+    container.appendChild(panel);
+    createGame(panel, i);
+  }
+})();
+</script>
+</body>
+</html>

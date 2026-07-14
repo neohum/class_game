@@ -705,7 +705,7 @@ function handleCellAction(playerId, r, c, cellElement, isClick = false) {
   }
 }
 
-// 틀렸을 때 빨갛게 경고 깜빡이는 시각 효과
+// 틀렸을 때 빨갛게 경고 깜빡이는 시 효과
 function showErrorEffect(cellElement) {
   cellElement.style.backgroundColor = '#ef4444';
   cellElement.style.transform = 'scale(0.85)';
@@ -771,7 +771,7 @@ function checkProgressAndVictory(playerId, state) {
         overlay.className = 'clear-overlay';
         overlay.id = `clear-overlay-${playerId}`;
         
-        let nextPuzzleId;
+        let nextPuzzleId = null;
         let nextBtnHtml = '';
         if (typeof state.currentPuzzleId === 'string' && state.currentPuzzleId.startsWith('t')) {
           const num = parseInt(state.currentPuzzleId.substring(1));
@@ -779,22 +779,43 @@ function checkProgressAndVictory(playerId, state) {
             nextPuzzleId = `t${num + 1}`;
             nextBtnHtml = `<button type="button" class="clear-overlay-btn" onclick="nextPlayerPuzzle(${playerId}, '${nextPuzzleId}')">🚀 다음 공부하기</button>`;
           } else {
-nextBtnHtml = `<button type="button" class="clear-overlay-btn" onclick="nextPlayerPuzzle(${playerId}, 1)">⭐ 1단계 풀기</button>`;
+            if (state.currentSize === 3 || state.currentSize === 4 || state.currentSize === 5) {
+              const firstPuzzle = PUZZLES.find(p => p.size === state.currentSize);
+              nextPuzzleId = firstPuzzle ? firstPuzzle.id : 1;
+            } else {
+              nextPuzzleId = `g_${state.currentSize}_1`;
+            }
+            nextBtnHtml = `<button type="button" class="clear-overlay-btn" onclick="nextPlayerPuzzle(${playerId}, ${typeof nextPuzzleId === 'string' ? `'${nextPuzzleId}'` : nextPuzzleId})">⭐ 1단계 풀기</button>`;
+          }
+        } else if (typeof state.currentPuzzleId === 'string' && state.currentPuzzleId.startsWith('g_')) {
+          const parts = state.currentPuzzleId.split('_');
+          const sz = parseInt(parts[1]);
+          const idxId = parseInt(parts[2]);
+          if (idxId < 200) {
+            nextPuzzleId = `g_${sz}_${idxId + 1}`;
+            nextBtnHtml = `<button type="button" class="clear-overlay-btn" onclick="nextPlayerPuzzle(${playerId}, '${nextPuzzleId}')">🚀 다음 단계 풀기</button>`;
+          } else {
+            nextBtnHtml = `<p style="color:#059669; font-weight:bold; margin-bottom:10px;">🎉 200단계를 모두 완료했어요!</p>`;
           }
         } else {
-          if (state.currentPuzzleId < 200) {
-            nextPuzzleId = state.currentPuzzleId + 1;
+          const curId = parseInt(state.currentPuzzleId);
+          if (curId < 200) {
+            nextPuzzleId = curId + 1;
             nextBtnHtml = `<button type="button" class="clear-overlay-btn" onclick="nextPlayerPuzzle(${playerId}, ${nextPuzzleId})">🚀 다음 단계 풀기</button>`;
           } else {
             nextBtnHtml = `<p style="color:#059669; font-weight:bold; margin-bottom:10px;">🎉 200단계를 모두 완료했어요!</p>`;
           }
         }
 
+        let countdownSec = 2; // 2초 후 자동 이동
         overlay.innerHTML = `
           <div class="clear-overlay-title">🎉 완성! 참 잘했어요!</div>
           <div class="clear-overlay-stats">
             걸린 시간: <strong>${state.elapsedSeconds}초</strong><br>
             실수 횟수: <strong>${state.errors}회</strong>
+          </div>
+          <div id="auto-next-message-${playerId}" style="font-size: 0.85rem; color: #059669; font-weight: bold; margin-bottom: 8px;">
+            ${nextPuzzleId ? `⏱️ ${countdownSec}초 후 자동으로 다음 단계가 시작됩니다...` : ''}
           </div>
           <div class="clear-overlay-buttons">
             ${nextBtnHtml}
@@ -802,6 +823,23 @@ nextBtnHtml = `<button type="button" class="clear-overlay-btn" onclick="nextPlay
           </div>
         `;
         panel.appendChild(overlay);
+
+        if (nextPuzzleId) {
+          const countdownInterval = setInterval(() => {
+            countdownSec--;
+            const msgEl = document.getElementById(`auto-next-message-${playerId}`);
+            if (msgEl) {
+              msgEl.innerText = `⏱️ ${countdownSec}초 후 자동으로 다음 단계가 시작됩니다...`;
+            }
+            if (countdownSec <= 0) {
+              clearInterval(countdownInterval);
+              if (document.getElementById(`clear-overlay-${playerId}`) && state.finished) {
+                autoNextPlayerPuzzle(playerId, nextPuzzleId);
+              }
+            }
+          }, 1000);
+          state.autoNextInterval = countdownInterval;
+        }
       }
     }
   }
@@ -1293,8 +1331,60 @@ function endMultiGame() {
   modal.classList.add('active');
 }
 
+// 다음 단계 자동으로 시작되게 처리하는 함수
+function autoNextPlayerPuzzle(playerId, nextPuzzleId) {
+  const p = multiPlayers.find(pl => pl.id === playerId);
+  if (!p) return;
+
+  if (p.autoNextInterval) {
+    clearInterval(p.autoNextInterval);
+    p.autoNextInterval = null;
+  }
+
+  // 개별 완료 오버레이 제거
+  const clearOverlay = document.getElementById(`clear-overlay-${playerId}`);
+  if (clearOverlay) clearOverlay.remove();
+  
+  // 플레이어 완료 패널 스타일 해제
+  const panel = document.getElementById(`player-panel-${playerId}`);
+  if (panel) panel.classList.remove('finished');
+
+  // 1. startActive가 false인 상태에서 changePlayerPuzzle을 수행하여 새 퍼즐 로드
+  p.startActive = false;
+  changePlayerPuzzle(playerId, nextPuzzleId);
+
+  // 2. 오버레이 없이 바로 활성화 상태로 전환
+  p.startActive = true;
+  p.elapsedSeconds = 0;
+  p.startTime = new Date().getTime();
+  p.finished = false;
+  p.finishedTime = null;
+  p.errors = 0;
+  p.progress = 0;
+
+  // 에러 카운터 UI 초기화
+  updateErrorDisplay(playerId, 0);
+  const progSpan = document.getElementById(`multi-progress-${playerId}`);
+  if (progSpan) progSpan.innerText = '0%';
+
+  // 개별 타이머 초기화 표시
+  const timerSpan = document.getElementById(`multi-timer-${playerId}`);
+  if (timerSpan) {
+    timerSpan.innerText = `⏱️ 0초`;
+  }
+  
+  playSound('pencil');
+}
+window.autoNextPlayerPuzzle = autoNextPlayerPuzzle;
+
 // 다음 단계 풀기 버튼 클릭 시 동작
 function nextPlayerPuzzle(playerId, nextPuzzleId) {
+  const p = multiPlayers.find(pl => pl.id === playerId);
+  if (p && p.autoNextInterval) {
+    clearInterval(p.autoNextInterval);
+    p.autoNextInterval = null;
+  }
+
   // 개별 완료 오버레이 제거
   const clearOverlay = document.getElementById(`clear-overlay-${playerId}`);
   if (clearOverlay) clearOverlay.remove();
@@ -1310,6 +1400,12 @@ window.nextPlayerPuzzle = nextPlayerPuzzle;
 
 // 단계 변경 버튼 클릭 시 동작
 function resetPlayerToLobby(playerId) {
+  const p = multiPlayers.find(pl => pl.id === playerId);
+  if (p && p.autoNextInterval) {
+    clearInterval(p.autoNextInterval);
+    p.autoNextInterval = null;
+  }
+
   // 개별 완료 오버레이 제거
   const clearOverlay = document.getElementById(`clear-overlay-${playerId}`);
   if (clearOverlay) clearOverlay.remove();
@@ -1319,7 +1415,6 @@ function resetPlayerToLobby(playerId) {
   if (panel) panel.classList.remove('finished');
 
   // 대기 오버레이 복원 (현재 단계 그대로 드롭다운 유지)
-  const p = multiPlayers.find(pl => pl.id === playerId);
   restoreStartOverlay(playerId, p.currentPuzzleId);
 }
 window.resetPlayerToLobby = resetPlayerToLobby;

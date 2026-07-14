@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+    <!-- Grid Cell Fill Gradient -->
+    <linearGradient id="cellGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+    <!-- Pencil Body Gradient -->
+    <linearGradient id="pencilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base Rounded Card -->
+  <rect width="100" height="100" rx="22" fill="url(#bgGrad)" />
+
+  <!-- Grid Pattern Border -->
+  <rect x="18" y="18" width="64" height="64" rx="10" fill="#ffffff" fill-opacity="0.15" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" />
+
+  <!-- Grid Lines (3x3 grid inside) -->
+  <!-- Vertical lines -->
+  <line x1="39.3" y1="18" x2="39.3" y2="82" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+  <line x1="60.6" y1="18" x2="60.6" y2="82" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+  <!-- Horizontal lines -->
+  <line x1="18" y1="39.3" x2="82" y2="39.3" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+  <line x1="18" y1="60.6" x2="82" y2="60.6" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+
+  <!-- Colored Cells -->
+  <!-- Cell (0, 0) -->
+  <rect x="21" y="21" width="15" height="15" rx="4" fill="url(#cellGrad)" />
+  <!-- Cell (1, 1) -->
+  <rect x="42.5" y="42.5" width="15" height="15" rx="4" fill="url(#cellGrad)" />
+  <!-- Cell (2, 2) -->
+  <rect x="64" y="64" width="15" height="15" rx="4" fill="url(#cellGrad)" />
+  <!-- Cell (2, 0) -->
+  <rect x="64" y="21" width="15" height="15" rx="4" fill="#38bdf8" />
+
+  <!-- Pencil Element -->
+  <g transform="translate(10, 10) rotate(-15)">
+    <!-- Pencil body -->
+    <path d="M 68 25 L 80 37 L 45 72 L 33 60 Z" fill="url(#pencilGrad)" />
+    <!-- Pencil wood tip -->
+    <path d="M 33 60 L 45 72 L 28 78 Z" fill="#fed7aa" />
+    <!-- Pencil lead tip -->
+    <path d="M 30 75 L 34 77 L 28 78 Z" fill="#1e293b" />
+    <!-- Pencil Eraser -->
+    <path d="M 68 25 L 80 37 L 84 33 L 72 21 Z" fill="#fda4af" />
+    <!-- Eraser metal band -->
+    <path d="M 66 27 L 78 39 L 75 42 L 63 30 Z" fill="#94a3b8" />
+  </g>
+</svg>

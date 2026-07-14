@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>네모네모 로직 - 초등 1학년용 노노그램 대결!</title>
+  <meta name="description" content="초등학교 1학년 눈높이에 맞춘 3x3, 4x4, 5x5 네모네모 로직! 튜토리얼과 200단계 퍼즐, 그리고 최대 6명이 동시에 즐기는 대결 모드까지 오프라인으로 즐겨보세요.">
+  <link rel="stylesheet" href="/games/nemonemo-logic/style.css">
+</head>
+<body>
+
+  <!-- 폭죽 파티클을 흩뿌릴 캔버스 -->
+  <canvas id="canvas-confetti"></canvas>
+
+  <div id="app-container">
+    <!-- 공통 헤더 -->
+    <header>
+      <h1>🎨 네모네모 로직 ✏️</h1>
+      <p>가로세로 숫자를 보고 귀여운 그림을 완성해봐요!</p>
+    </header>
+
+    <!-- [1] 홈 화면 (모드 선택) -->
+    <div id="home-screen" class="screen active">
+      <div class="menu-grid">
+        <div class="menu-card solo" id="btn-goto-solo">
+          <span class="icon">👦</span>
+          <h2>혼자서 척척!</h2>
+          <p>네모네모 로직의 비밀을 배우고<br><strong>총 200단계</strong>의 퍼즐에 도전해요!</p>
+        </div>
+        <div class="menu-card multi" id="btn-goto-multi">
+          <span class="icon">👥</span>
+          <h2>친구와 함께!</h2>
+          <p>한 화면에서 <strong>최대 6명</strong>이 동시에!<br>누가 먼저 풀지 신나는 시합을 해봐요!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- [2] 1인용 로비 (레벨 선택) -->
+    <div id="solo-lobby-screen" class="screen" style="flex-direction: column; justify-content: space-between; height: 100%;">
+      <!-- 상단 제목: 순수 정보 노출 -->
+      <div class="lobby-header" style="width: 100%; border-bottom: none; margin-bottom: 5px; justify-content: center; padding-bottom: 2px;">
+        <h2 style="color: var(--main-dark); font-size: 1.8rem; margin: 0; text-align: center;">🏫 혼자서도 척척! 단계를 골라보세요</h2>
+      </div>
+
+      <!-- 중앙 단계 버튼 그리드 영역: flex-end로 아래쪽 밀착 -->
+      <div class="solo-lobby-body" style="flex-grow: 1; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; margin-bottom: 5px;">
+        <!-- 3x3 레벨 그리드 (기초 튜토리얼 4개 포함) -->
+        <div id="solo-container-3x3" class="level-container active">
+          <div class="level-grid" id="level-grid-3x3"></div>
+        </div>
+
+        <!-- 4x4 레벨 그리드 -->
+        <div id="solo-container-4x4" class="level-container">
+          <div class="level-grid" id="level-grid-4x4"></div>
+        </div>
+
+        <!-- 5x5 레벨 그리드 -->
+        <div id="solo-container-5x5" class="level-container">
+          <div class="level-grid" id="level-grid-5x5"></div>
+        </div>
+      </div>
+
+      <!-- 최하단 바닥 밀착 제어 바 (난이도 탭 버튼 + 나가기 버튼) -->
+      <div class="solo-lobby-bottom-bar" style="width: 100%; display: flex; gap: 8px; align-items: center; margin-top: 2px; height: 42px;">
+        <button class="back-btn back-to-home" type="button" style="margin: 0; flex: 1.2; font-size: 0.95rem; padding: 10px 12px; height: 42px; text-align: center; justify-content: center;">🏠 처음으로</button>
+        <div class="tabs" style="flex: 4; display: flex; gap: 6px; height: 42px; margin: 0; background: none; box-shadow: none; padding: 0;">
+          <button class="tab-btn active" data-target="solo-container-3x3" type="button" style="flex: 1; font-size: 0.9rem; padding: 8px 4px; height: 42px;">🌱 3x3</button>
+          <button class="tab-btn" data-target="solo-container-4x4" type="button" style="flex: 1; font-size: 0.9rem; padding: 8px 4px; height: 42px;">🌿 4x4</button>
+          <button class="tab-btn" data-target="solo-container-5x5" type="button" style="flex: 1; font-size: 0.9rem; padding: 8px 4px; height: 42px;">🌳 5x5</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- [3] 1인용 플레이 화면 -->
+    <div id="solo-play-screen" class="screen">
+      <!-- 헤더는 제목만 표시 -->
+      <div class="lobby-header" style="width: 100%; margin-bottom: 5px; justify-content: center; border-bottom: none;">
+        <h2 id="solo-title" style="color: var(--main-dark); font-size: 1.8rem; text-align: center;">1단계 - 사랑 하트</h2>
+      </div>
+
+      <!-- 세로형 콤팩트 배치 -->
+      <div class="solo-play-layout" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end;">
+        <!-- 상태 표시 (상단 얇은 HUD) -->
+        <div class="player-hud" style="margin-bottom: 4px; background: rgba(255,255,255,0.7); padding: 4px 15px; border-radius: 12px;">
+          <span style="font-size:0.95rem;color:#e11d48; font-weight:bold;">❌ 실수: <span id="solo-errors">0</span></span>
+          <span id="solo-progress" style="font-size:0.95rem;color:#10b981; font-weight:bold;">완성도: 0%</span>
+        </div>
+
+        <!-- 튜토리얼 가이드 말풍선 -->
+        <div class="guide-box" id="solo-guide" style="margin-bottom: 4px; font-size: 0.85rem; padding: 6px; width: 100%; border-style: dashed; border-width: 2px; line-height: 1.3; display: none;">
+          가로와 세로 숫자의 힌트를 잘 보고 알맞은 네모칸을 칠해보세요!
+        </div>
+
+        <!-- 네모네모 로직 보드 판 -->
+        <div class="board-container" id="solo-board-area" style="flex-grow: 1; margin-bottom: 0px; padding: 2px; box-shadow: none; background: none;">
+          <!-- 스크립트에서 동적 생성됨 -->
+        </div>
+
+        <!-- 최하단 바닥 밀착 버튼 바 (도구 + 뒤로가기) -->
+        <div class="solo-bottom-bar" style="display: flex; gap: 10px; width: 100%; margin-top: 5px; align-items: center; justify-content: center;">
+          <button class="back-btn" id="btn-solo-back-to-lobby" onclick="showScreen('solo-lobby-screen')" type="button" style="margin: 0; flex: 1; font-size: 1rem; padding: 10px 15px; text-align: center; justify-content: center; height: 42px;">⬅️ 나가기</button>
+          <div class="tool-selector" style="flex: 2; margin: 0; display: flex; gap: 8px; width: auto; height: 42px;">
+            <button class="tool-btn active" id="solo-tool-pencil" type="button" style="flex: 1; font-size: 1rem; padding: 10px;">✏️ 칠하기</button>
+            <button class="tool-btn btn-x" id="solo-tool-x" type="button" style="flex: 1; font-size: 1rem; padding: 10px;">❌ 가위표</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- [4] 함께 하기 로비 (설정 화면) -->
+    <div id="multi-lobby-screen" class="screen">
+      <div class="lobby-header" style="width:100%;">
+        <button class="back-btn back-to-home" type="button">🏠 처음으로</button>
+        <h2 style="color: var(--main-dark);">👥 대결 설정하기</h2>
+        <div style="width: 110px;"></div>
+      </div>
+
+      <form id="multi-setup-form" class="multi-setup-form">
+        <!-- 1. 참가 인원 수 -->
+        <div class="setup-group">
+          <label>1. 함께 할 친구들은 몇 명인가요?</label>
+          <div class="player-count-buttons" id="multi-player-count-btns">
+            <!-- 2명~6명 선택 버튼 동적 생성 -->
+          </div>
+        </div>
+
+        <!-- 2. 플레이어 이름 입력 -->
+        <div class="setup-group">
+          <label>2. 친구들의 멋진 이름을 적어주세요!</label>
+          <div class="player-names-grid" id="multi-player-names-grid">
+            <!-- 인원수에 맞게 동적 인풋 제공 -->
+          </div>
+        </div>
+
+        <!-- 3. 퍼즐 칸 크기 선택 -->
+        <div class="setup-group">
+          <label>3. 퍼즐 판의 칸 크기를 골라주세요! (3~10칸)</label>
+          <select id="multi-size-select" class="player-name-input" style="width: 100%; font-weight: bold;">
+            <option value="3">🌱 3 x 3 칸 (아주 아주 쉬움)</option>
+            <option value="4">🌿 4 x 4 칸 (아주 쉬움)</option>
+            <option value="5">🌳 5 x 5 칸 (쉬움)</option>
+            <option value="6">🌸 6 x 6 칸 (보통)</option>
+            <option value="7">🐟 7 x 7 칸 (보통)</option>
+            <option value="8">🎈 8 x 8 칸 (조금 어려움)</option>
+            <option value="9">🚀 9 x 9 칸 (어려움)</option>
+            <option value="10">👑 10 x 10 칸 (아주 어려움)</option>
+          </select>
+        </div>
+
+        <!-- 시작하기 -->
+        <button type="submit" class="start-btn">플레이 하러 가기! 🚀</button>
+      </form>
+    </div>
+
+    <!-- [5] 함께 하기 플레이 화면 -->
+    <!-- [5] 함께 하기 플레이 화면 -->
+    <div id="multi-play-screen" class="screen" style="flex-direction: column; justify-content: space-between;">
+      <!-- 상단 정보 헤더: 정보만 노출 -->
+      <div class="lobby-header" style="width: 100%; border-bottom: none; margin-bottom: 4px; justify-content: space-between; padding-bottom: 2px;">
+        <div style="width: 120px;"></div> <!-- 균형 맞추기 -->
+        <h2 id="multi-play-title" style="color: var(--main-dark); font-size: 1.8rem; margin: 0;">🏫 네모네모 로직 교실</h2>
+        <div class="back-btn" style="background:#f1f5f9; border-color:#cbd5e1; cursor:default; pointer-events:none; margin: 0; font-size: 0.95rem; height: 36px; padding: 0 12px; display: flex; align-items: center;">
+          ⏱️ <span id="multi-timer-val">00:00</span>
+        </div>
+      </div>
+
+      <!-- 플레이어 그리드 분할 영역 -->
+      <div class="multi-play-grid" id="multi-play-grid" style="flex-grow: 1; margin-bottom: 5px;">
+        <!-- 스크립트에서 동적 생성 (1~6개 패널) -->
+      </div>
+
+      <!-- 글로벌 하단 제어 바: 나가기 버튼 바닥 배치 -->
+      <div class="multi-global-bottom-bar" style="width: 100%; display: flex; justify-content: center; margin-top: 2px;">
+        <button class="back-btn" id="btn-multi-back-to-lobby" onclick="showScreen('multi-lobby-screen')" type="button" style="margin: 0; width: clamp(200px, 30vw, 400px); font-size: 1.05rem; padding: 10px 20px; height: 42px; text-align: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">⬅️ 나가기 (설정으로)</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- [6] 공통 알림 / 축하 모달 -->
+  <div id="clear-modal" class="modal-overlay">
+    <div class="popup">
+      <div class="popup-img">🎉</div>
+      <h2 id="modal-title">축하합니다!</h2>
+      <p id="modal-body">문제를 멋지게 해결했어요!</p>
+      <div class="popup-buttons">
+        <button type="button" class="popup-btn" id="modal-action-btn">다음 단계로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 데이터 및 로직 로드 -->
+  <script src="/games/nemonemo-logic/puzzles.js"></script>
+  <script src="/games/nemonemo-logic/script.js"></script>
+</body>
+</html>

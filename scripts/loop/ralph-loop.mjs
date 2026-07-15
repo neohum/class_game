@@ -135,7 +135,7 @@ function agentKeyFor(cmdline) {
   const s = cmdline.toLowerCase();
   if (s.includes("invoke-claude") || /\bclaude\b/.test(s)) return "claude";
   if (s.includes("invoke-codex") || /\bcodex\b/.test(s)) return "codex";
-  if (s.includes("invoke-antigravity") || /\bantigravity\b/.test(s)) return "antigravity";
+  if (s.includes("invoke-agy") || s.includes("invoke-antigravity") || /\b(agy|antigravity)\b/.test(s)) return "antigravity";
   if (s.includes("invoke-gemini") || /\bgemini\b/.test(s)) return "gemini";
   return "builder";
 }
@@ -151,7 +151,7 @@ function builderRoster() {
   return [
     CFG.builder,                                                  // default: codex (typist)
     `${node} ${resolve(HERE, "..", "invoke-claude.mjs")}`,        // claude (architect)
-    `${node} ${resolve(HERE, "..", "invoke-antigravity.mjs")}`,   // antigravity
+    `${node} ${resolve(HERE, "..", "invoke-agy.mjs")}`,           // AGY / Antigravity
     `${node} ${resolve(HERE, "..", "invoke-gemini.mjs")}`,        // gemini
   ];
 }

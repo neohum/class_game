@@ -1,9 +1,10 @@
 # HARNESS.md — how this multi-agent harness works
 
-This project ships with a three-agent harness:
+This project ships with a three-agent router and native adapters for Claude
+Code, Codex, and AGY:
 
 ```
-       user / Claude Code
+       user / native client
               │
               ▼
    ┌───────── route.mjs ─────────┐
@@ -12,7 +13,7 @@ This project ships with a three-agent harness:
           │          │
     ┌──────▼──┐  ┌──────▼──────┐  ┌──────────┐
     │architect│  │ researcher  │  │  typist  │
-    │ (claude)│  │ antigravity │  │  (codex) │
+    │ (claude)│  │    (agy)    │  │  (codex) │
     └─────────┘  └─────────────┘  └──────────┘
 ```
 
@@ -20,15 +21,20 @@ This project ships with a three-agent harness:
 
 | File                              | Role                                             |
 | --------------------------------- | ------------------------------------------------ |
-| `CLAUDE.md`                       | shared conventions; loaded by Claude Code        |
+| `AGENTS.md`                       | shared contract; loaded by Codex and AGY          |
+| `CLAUDE.md`                       | Claude adapter; imports `AGENTS.md`               |
 | `lat.md`                          | code-graph / file-level map of the repo          |
 | `DESIGN.md`                       | UI/UX system contract                            |
 | `.claude/agents/*.md`             | per-agent identity & lane                        |
 | `.claude/commands/*.md`           | slash commands (`/route`, `/analyze`, `/design`) |
 | `.claude/settings.json`           | allowed shell commands                           |
-| `.mcp.json`                       | MCP servers (filesystem, github, postgres)       |
+| `.codex/agents/*.toml`            | Codex-native custom agents                       |
+| `.codex/config.toml`              | Codex-native project MCP and agent settings      |
+| `.agents/agents/*/agent.md`       | AGY-native custom agents                         |
+| `.agents/mcp_config.json`         | AGY-native workspace MCP servers                 |
+| `.mcp.json`                       | Claude-native MCP servers                        |
 | `scripts/route.mjs`               | picks an agent for a task                        |
-| `scripts/invoke-{claude,codex,antigravity}.mjs` | thin CLI wrappers                       |
+| `scripts/invoke-{claude,codex,agy}.mjs` | thin CLI wrappers                               |
 
 ## Daily usage
 
@@ -46,12 +52,24 @@ node scripts/route.mjs "draft a migration plan for auth" --agent=architect --run
 In Claude Code, the same actions are available as slash commands:
 `/route`, `/analyze`, `/design`.
 
+When you work directly in Claude Code, Codex, or AGY, stay on that client's
+native agent surface. The cross-CLI router is an explicit opt-in for tasks where
+you intentionally want another provider to take a lane.
+
 ## Adding a new MCP server
 
-Edit `.mcp.json`, restart Claude Code. Reference env vars with `${VAR}` — Claude Code expands them.
+Add the server to the native config for every client that should expose it:
+
+- Claude Code: `.mcp.json`
+- Codex: `.codex/config.toml`
+- AGY: `.agents/mcp_config.json`
+
+Keep credentials in environment variables and restart the client after changes.
 
 ## Adding a new agent
 
-1. Drop a new markdown file in `.claude/agents/` with frontmatter (`name`, `description`, `tools`).
+1. Add the role in each client-native location that should expose it:
+   `.claude/agents/<name>.md`, `.codex/agents/<name>.toml`, and
+   `.agents/agents/<name>/agent.md`.
 2. Add a signal block to `scripts/route.mjs` so it can be routed automatically.
 3. Optionally add `scripts/invoke-<name>.mjs` if it wraps an external CLI.

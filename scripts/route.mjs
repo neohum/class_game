@@ -57,7 +57,7 @@ function rationale(agent, s) {
 
 const AGENT_TO_CLI = {
   architect: "claude",
-  researcher: "antigravity",
+  researcher: "agy",
   typist: "codex",
 };
 

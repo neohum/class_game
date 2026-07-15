@@ -1,0 +1,21 @@
+# classgame — Codex project configuration
+# Generated 2026-07-15 by create-agent-harness.
+# Codex loads this file only for trusted projects.
+
+[agents]
+max_threads = 4
+max_depth = 1
+
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "."]
+startup_timeout_sec = 30
+
+[mcp_servers.github]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+env_vars = ["GITHUB_PERSONAL_ACCESS_TOKEN"]
+startup_timeout_sec = 30
+
+# PostgreSQL needs a real connection string as a CLI argument. Add it locally
+# with `codex mcp add` instead of committing DATABASE_URL to this file.

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:nemonemo": "node scripts/validate-nemonemo-tutorial.mjs"
   },
   "dependencies": {
     "next": "16.2.2",

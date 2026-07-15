@@ -4,7 +4,7 @@
 document.addEventListener('contextmenu', e => e.preventDefault());
 
 // === 전역 상태 관리 ===
-let gameState = "home"; // "home" | "solo_lobby" | "solo_play" | "multi_lobby" | "multi_play"
+let gameState = "home"; // "home" | "team_tutorial_lobby" | "solo_lobby" | "solo_play" | "multi_lobby" | "multi_play"
 let currentLevel = null; // 숫자(1~200) 또는 튜토리얼ID("t1"~"t4")
 let solvedLevels = [];   // 솔로 모드에서 완료한 레벨 ID들
 
@@ -29,11 +29,19 @@ let multiTimerInterval = null;
 let completedPlayers = []; // { name, time, errors }
 let selectedMultiMode = "normal"; // "normal" | "tutorial"
 
+// 6인 동시 튜토리얼 상태
+let teamTutorialState = {
+  active: false,
+  stageIndex: 0,
+  countdownInterval: null,
+  stageCompleteShown: false
+};
+
 // 마우스/터치 드래그용 상태
 let isPointerDown = false;
-let activePointerDowns = {}; // 플레이어별 드래그 포인터 락 상태 격리
-let dragPlayerId = null; 
-let dragStartValue = null;
+let soloPointerId = null;
+let activePointerDowns = {}; // playerId -> pointerId, 여러 명의 동시 터치를 서로 격리
+let dragStartValues = {}; // "playerId:pointerId" -> 이번 드래그에서 적용할 값
 
 // === Web Audio API 효과음 생성 시스템 ===
 let audioCtx = null;
@@ -309,6 +317,42 @@ function calculateProgress(board2D, target2D) {
   return Math.max(0, Math.min(100, score));
 }
 
+// X표까지 연습하는 튜토리얼은 색칠 칸과 빈칸 표시를 모두 진행률에 포함한다.
+function calculateTeamTutorialProgress(board2D, target2D, requireX) {
+  if (!requireX) return calculateProgress(board2D, target2D);
+
+  let correct = 0;
+  const total = board2D.length * board2D.length;
+  for (let r = 0; r < board2D.length; r++) {
+    for (let c = 0; c < board2D.length; c++) {
+      const expected = target2D[r][c] === 1 ? 1 : 2;
+      if (board2D[r][c] === expected) correct++;
+    }
+  }
+  return Math.round((correct / total) * 100);
+}
+
+function checkTeamTutorialVictory(board2D, target2D, requireX) {
+  if (!checkVictory(board2D, target2D)) return false;
+  if (!requireX) return true;
+
+  for (let r = 0; r < board2D.length; r++) {
+    for (let c = 0; c < board2D.length; c++) {
+      if (target2D[r][c] === 0 && board2D[r][c] !== 2) return false;
+    }
+  }
+  return true;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 // === 화면 및 조작 인터페이스 렌더러 ===
 
 // 화면 전환 헬퍼
@@ -320,7 +364,7 @@ function showScreen(screenId) {
   
   // 상태 동기화
   gameState = screenId.replace('-screen', '');
-  if (gameState === 'home') {
+  if (screenId !== 'multi-play-screen') {
     stopMultiTimer();
   }
 }
@@ -357,6 +401,20 @@ window.addEventListener('DOMContentLoaded', () => {
 // 전역 이벤트 리스너 설정
 function setupEventListeners() {
   // 메인 카드 클릭
+  const tutorialCard = document.getElementById('btn-goto-team-tutorial');
+  const openTeamTutorialLobby = () => {
+    initAudio();
+    setupTeamTutorialLobby();
+    showScreen('team-tutorial-lobby-screen');
+  };
+  tutorialCard.addEventListener('click', openTeamTutorialLobby);
+  tutorialCard.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openTeamTutorialLobby();
+    }
+  });
+
   document.getElementById('btn-goto-solo').addEventListener('click', () => {
     initAudio();
     renderSoloLobby();
@@ -371,21 +429,31 @@ function setupEventListeners() {
   // 뒤로가기 버튼들
   document.querySelectorAll('.back-to-home').forEach(btn => {
     btn.addEventListener('click', () => {
+      stopTeamTutorialCountdown();
       showScreen('home-screen');
     });
   });
 
+  document.getElementById('btn-start-team-tutorial').addEventListener('click', startTeamTutorial);
+  document.getElementById('btn-team-tutorial-exit').addEventListener('click', leaveTeamTutorial);
+  document.getElementById('btn-team-tutorial-hint').addEventListener('click', showNextTeamTutorialHint);
+
   // 드래그 종료를 위한 글로벌 포인터 리스너
-  window.addEventListener('pointerup', () => {
-    isPointerDown = false;
-    activePointerDowns = {};
-    dragStartValue = null;
-  });
-  window.addEventListener('pointercancel', () => {
-    isPointerDown = false;
-    activePointerDowns = {};
-    dragStartValue = null;
-  });
+  const releasePointerDrag = (event) => {
+    if (soloPointerId === event.pointerId) {
+      isPointerDown = false;
+      soloPointerId = null;
+      delete dragStartValues[`solo:${event.pointerId}`];
+    }
+    Object.entries(activePointerDowns).forEach(([playerId, pointerId]) => {
+      if (pointerId === event.pointerId) {
+        delete activePointerDowns[playerId];
+        delete dragStartValues[`${playerId}:${event.pointerId}`];
+      }
+    });
+  };
+  window.addEventListener('pointerup', releasePointerDrag);
+  window.addEventListener('pointercancel', releasePointerDrag);
 }
 
 // === 솔로 로비 (레벨 셀렉터) 구현 ===
@@ -488,7 +556,7 @@ function startSoloPlay(puzzle, isTutorial = false) {
   };
   document.getElementById('solo-tool-x').onclick = () => {
     soloState.activeTool = "x";
-    document.getElementById('solo-tool-x').classList.remove('active');
+    document.getElementById('solo-tool-pencil').classList.remove('active');
     document.getElementById('solo-tool-x').classList.add('active');
   };
 
@@ -519,6 +587,7 @@ function renderBoard(targetAreaId, playerId, boardState, targetState) {
   for (let c = 0; c < size; c++) {
     const th = document.createElement('th');
     th.className = 'col-header-cell';
+    th.dataset.col = c;
     
     const clueCont = document.createElement('div');
     clueCont.className = 'clue-container';
@@ -548,6 +617,7 @@ function renderBoard(targetAreaId, playerId, boardState, targetState) {
     // 가로(행) 힌트 채우기
     const rowHeader = document.createElement('th');
     rowHeader.className = 'row-header-cell';
+    rowHeader.dataset.row = r;
     
     const clueCont = document.createElement('div');
     clueCont.className = 'clue-container';
@@ -587,16 +657,19 @@ function renderBoard(targetAreaId, playerId, boardState, targetState) {
         cell.releasePointerCapture(e.pointerId); // 드래그 시 다른 엘리먼트로 포인터 엔터가 가도록 방출
         if (playerId === 'solo') {
           isPointerDown = true;
+          soloPointerId = e.pointerId;
         } else {
-          activePointerDowns[playerId] = true;
+          activePointerDowns[playerId] = e.pointerId;
         }
-        handleCellAction(playerId, r, c, cell, true);
+        handleCellAction(playerId, r, c, cell, true, e.pointerId);
       });
 
       cell.addEventListener('pointerenter', (e) => {
-        const isDown = (playerId === 'solo') ? isPointerDown : activePointerDowns[playerId];
+        const isDown = (playerId === 'solo')
+          ? (isPointerDown && soloPointerId === e.pointerId)
+          : activePointerDowns[playerId] === e.pointerId;
         if (isDown) {
-          handleCellAction(playerId, r, c, cell, false);
+          handleCellAction(playerId, r, c, cell, false, e.pointerId);
         }
       });
 
@@ -619,7 +692,7 @@ function updateCellVisual(cellElement, state) {
 }
 
 // 셀 탭/드래그 액션 처리 공통
-function handleCellAction(playerId, r, c, cellElement, isClick = false) {
+function handleCellAction(playerId, r, c, cellElement, isClick = false, pointerId = 0) {
   // 1. 게임 상태 확인 및 쿨다운 페널티 검사
   const state = (playerId === 'solo') ? soloState : multiPlayers.find(p => p.id === playerId);
   if (!state || state.cooldownActive) return;
@@ -634,30 +707,32 @@ function handleCellAction(playerId, r, c, cellElement, isClick = false) {
   const activeTool = state.activeTool;
   const currentVal = state.board[r][c];
   const isTargetFilled = (state.target[r][c] === 1);
+  const dragKey = `${playerId}:${pointerId}`;
 
   // 3. 드래그 시작 시 액션 종류 결정
   if (isClick) {
     if (activeTool === 'pencil') {
       if (currentVal === 1) {
         // 이미 칠해져 있으면 지운다
-        dragStartValue = 0;
+        dragStartValues[dragKey] = 0;
       } else {
         // 안 칠해져 있으면 연필 칠하기 시도
-        dragStartValue = 1;
+        dragStartValues[dragKey] = 1;
       }
     } else { // X 도구인 경우
       if (currentVal === 2) {
         // 이미 X이면 지운다
-        dragStartValue = 0;
+        dragStartValues[dragKey] = 0;
       } else {
         // 아니면 X칠하기 시도
-        dragStartValue = 2;
+        dragStartValues[dragKey] = 2;
       }
     }
   }
 
   // dragStartValue가 설정되지 않았다면 기본값 지정
-  if (dragStartValue === null) dragStartValue = 1;
+  if (dragStartValues[dragKey] === undefined) dragStartValues[dragKey] = 1;
+  const dragStartValue = dragStartValues[dragKey];
 
   // 4. 셀 상태 변환 실행
   if (dragStartValue === 0) {
@@ -666,6 +741,9 @@ function handleCellAction(playerId, r, c, cellElement, isClick = false) {
       state.board[r][c] = 0;
       updateCellVisual(cellElement, 0);
       playSound('x');
+      if (selectedMultiMode === 'tutorial' && playerId !== 'solo') {
+        checkProgressAndVictory(playerId, state);
+      }
     }
   } 
   else if (dragStartValue === 1) {
@@ -681,7 +759,7 @@ function handleCellAction(playerId, r, c, cellElement, isClick = false) {
           updateErrorDisplay(playerId, state.errors);
 
           // 3회 실수마다 3초 조작 잠금 패널티 발동!
-          if (state.errors > 0 && state.errors % 3 === 0) {
+          if (selectedMultiMode !== 'tutorial' && state.errors > 0 && state.errors % 3 === 0) {
             triggerCooldownPenalty(playerId, state);
           }
         }
@@ -701,6 +779,9 @@ function handleCellAction(playerId, r, c, cellElement, isClick = false) {
       state.board[r][c] = 2;
       updateCellVisual(cellElement, 2);
       playSound('x');
+      if (selectedMultiMode === 'tutorial' && playerId !== 'solo') {
+        checkProgressAndVictory(playerId, state);
+      }
     }
   }
 }
@@ -727,7 +808,12 @@ function updateErrorDisplay(playerId, errorCount) {
 
 // 진행률 실시간 반영 및 우승 판독
 function checkProgressAndVictory(playerId, state) {
-  const prog = calculateProgress(state.board, state.target);
+  const activeTeamStage = selectedMultiMode === 'tutorial' && Number.isInteger(state.tutorialStageIndex)
+    ? TEAM_TUTORIAL_STAGES[state.tutorialStageIndex]
+    : null;
+  const prog = activeTeamStage
+    ? calculateTeamTutorialProgress(state.board, state.target, activeTeamStage.requireX)
+    : calculateProgress(state.board, state.target);
   
   if (playerId === 'solo') {
     document.getElementById('solo-progress').innerText = `${prog}%`;
@@ -749,6 +835,13 @@ function checkProgressAndVictory(playerId, state) {
     state.progress = prog;
     const progSpan = document.getElementById(`multi-progress-${playerId}`);
     if (progSpan) progSpan.innerText = `${prog}%`;
+
+    if (activeTeamStage) {
+      if (checkTeamTutorialVictory(state.board, state.target, activeTeamStage.requireX)) {
+        finishTeamTutorialPlayer(state);
+      }
+      return;
+    }
 
     if (checkVictory(state.board, state.target)) {
       state.finished = true;
@@ -1050,15 +1143,451 @@ window.changePlayerPuzzle = changePlayerPuzzle;
 let selectedMultiPlayerCount = 2;
 let selectedMultiSize = 3;
 
+// === 6인 동시 튜토리얼 ===
+
+const teamTutorialDefaultNames = [
+  "분홍 토끼", "파랑 돌고래", "초록 개구리",
+  "주황 여우", "보라 고래", "민트 공룡"
+];
+
+function setupTeamTutorialLobby() {
+  stopTeamTutorialCountdown();
+  stopMultiTimer();
+
+  const container = document.getElementById('tutorial-player-names-grid');
+  if (container.children.length === 6) return;
+
+  container.innerHTML = '';
+  teamTutorialDefaultNames.forEach((name, index) => {
+    const label = document.createElement('label');
+    label.className = `tutorial-name-card p${index + 1}`;
+    label.innerHTML = `
+      <span>${index + 1}번</span>
+      <input class="tutorial-name-input" type="text" maxlength="12" value="${name}" aria-label="${index + 1}번 플레이어 이름">
+    `;
+    container.appendChild(label);
+  });
+}
+
+function startTeamTutorial() {
+  initAudio();
+  selectedMultiMode = "tutorial";
+  teamTutorialState.active = true;
+  teamTutorialState.stageIndex = 0;
+  teamTutorialState.stageCompleteShown = false;
+  completedPlayers = [];
+
+  const nameInputs = document.querySelectorAll('#tutorial-player-names-grid .tutorial-name-input');
+  multiPlayers = Array.from(nameInputs).map((input, index) => ({
+    id: index + 1,
+    name: input.value.trim() || teamTutorialDefaultNames[index],
+    board: [],
+    target: [],
+    activeTool: "pencil",
+    errors: 0,
+    finished: false,
+    finishedTime: null,
+    progress: 0,
+    startActive: false,
+    startTime: null,
+    elapsedSeconds: 0,
+    currentPuzzleId: null,
+    currentSize: 3,
+    puzzleObject: null,
+    cooldownActive: false,
+    tutorialStageIndex: 0,
+    hintIndex: -1,
+    courseFinished: false,
+    autoNextTimeout: null
+  }));
+
+  const playScreen = document.getElementById('multi-play-screen');
+  playScreen.classList.add('tutorial-mode');
+  document.getElementById('team-tutorial-lesson-bar').hidden = false;
+  document.getElementById('team-tutorial-bottom-bar').hidden = false;
+  document.querySelector('.multi-global-bottom-bar').hidden = true;
+  showScreen('multi-play-screen');
+  loadTeamTutorialStage(0);
+}
+
+function loadTeamTutorialStage(stageIndex) {
+  if (!teamTutorialState.active) return;
+
+  const stage = TEAM_TUTORIAL_STAGES[stageIndex];
+  if (!stage) return;
+
+  stopTeamTutorialCountdown();
+  stopMultiTimer();
+  teamTutorialState.stageIndex = stageIndex;
+  teamTutorialState.stageCompleteShown = false;
+
+  multiPuzzle = stage;
+  multiPlayers.forEach(player => setTeamTutorialPlayerStage(player, stageIndex));
+
+  renderTeamTutorialLesson(stage, stageIndex);
+  renderTeamTutorialPanels();
+  updateTeamTutorialClassStatus();
+  beginTeamTutorialCountdown();
+}
+
+function clearTeamTutorialPlayerAdvance(player) {
+  if (!player?.autoNextTimeout) return;
+  clearTimeout(player.autoNextTimeout);
+  player.autoNextTimeout = null;
+}
+
+function setTeamTutorialPlayerStage(player, stageIndex) {
+  const stage = TEAM_TUTORIAL_STAGES[stageIndex];
+  if (!stage) return false;
+
+  clearTeamTutorialPlayerAdvance(player);
+  player.tutorialStageIndex = stageIndex;
+  player.hintIndex = -1;
+  player.board = Array(stage.size).fill(null).map(() => Array(stage.size).fill(0));
+  player.target = parseGridString(stage.grid, stage.size);
+  player.activeTool = "pencil";
+  player.errors = 0;
+  player.finished = false;
+  player.finishedTime = null;
+  player.progress = 0;
+  player.startActive = false;
+  player.startTime = null;
+  player.elapsedSeconds = 0;
+  player.currentPuzzleId = stage.id;
+  player.currentSize = stage.size;
+  player.puzzleObject = stage;
+  player.cooldownActive = false;
+  return true;
+}
+
+function renderTeamTutorialLesson(stage, stageIndex) {
+  teamTutorialState.stageIndex = stageIndex;
+  document.getElementById('multi-play-title').innerText = `🏫 6명 동시 수업 · ${stage.size} × ${stage.size}`;
+  document.getElementById('tutorial-lesson-index').innerText = `${stageIndex + 1} / ${TEAM_TUTORIAL_STAGES.length}`;
+  document.getElementById('tutorial-lesson-title').innerText = stage.title;
+  document.getElementById('tutorial-lesson-text').innerText = stage.lesson;
+  document.getElementById('tutorial-easy-tip').innerText = `💡 ${stage.easyTip}`;
+  document.getElementById('tutorial-size-badge').innerText = `${stage.size} × ${stage.size} · ${stage.badge}`;
+  document.getElementById('btn-team-tutorial-hint').innerText = '💡 모두 다음 힌트';
+}
+
+function renderTeamTutorialPanels() {
+  const gridContainer = document.getElementById('multi-play-grid');
+  gridContainer.innerHTML = '';
+  gridContainer.className = 'multi-play-grid players-6 team-tutorial-grid';
+
+  multiPlayers.forEach(player => renderTeamTutorialPlayerPanel(player));
+}
+
+function renderTeamTutorialPlayerPanel(player) {
+  const stage = TEAM_TUTORIAL_STAGES[player.tutorialStageIndex];
+  const gridContainer = document.getElementById('multi-play-grid');
+  let panel = document.getElementById(`player-panel-${player.id}`);
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.id = `player-panel-${player.id}`;
+    gridContainer.appendChild(panel);
+  }
+
+  panel.className = `player-board-panel tutorial-player-panel tutorial-size-${stage.size} p${player.id}`;
+  panel.setAttribute('aria-label', `${player.name}의 ${stage.size} 곱하기 ${stage.size} 튜토리얼 판, ${player.tutorialStageIndex + 1}단계`);
+  panel.innerHTML = `
+    <div class="player-hud tutorial-player-hud">
+      <span class="player-title">${player.id}. ${escapeHtml(player.name)} · ${player.tutorialStageIndex + 1}단계</span>
+      <span id="multi-timer-${player.id}" class="player-timer">단계 준비</span>
+      <span class="tutorial-error-count">실수 <strong id="multi-errors-${player.id}">0</strong></span>
+      <span id="multi-progress-${player.id}" class="player-progress">0%</span>
+    </div>
+    <div class="tutorial-panel-rule" id="tutorial-panel-rule-${player.id}">
+      <span>${player.tutorialStageIndex + 1}/${TEAM_TUTORIAL_STAGES.length} · ${stage.badge}</span>
+      <strong>${stage.title}</strong>
+      <small id="tutorial-player-tip-${player.id}">${stage.requireX ? '색칠과 X표를 모두 해야 완성이에요.' : '가장 확실한 줄부터 찾아보세요.'}</small>
+    </div>
+    <div class="tool-selector tutorial-tool-selector">
+      <button type="button" class="tool-btn btn-pencil active" id="multi-btn-pencil-${player.id}" aria-label="${escapeHtml(player.name)} 칠하기 도구">✏️ 칠하기</button>
+      <button type="button" class="tool-btn btn-x" id="multi-btn-x-${player.id}" aria-label="${escapeHtml(player.name)} X표 도구">❌ X표</button>
+      <button type="button" class="tool-btn tutorial-player-hint-btn" id="tutorial-player-hint-${player.id}" aria-label="${escapeHtml(player.name)} 개인 힌트">💡 힌트</button>
+    </div>
+    <div id="multi-board-area-${player.id}" class="board-container tutorial-board-area"></div>
+  `;
+
+  renderBoard(`multi-board-area-${player.id}`, player.id, player.board, player.target);
+
+  const pencilButton = panel.querySelector(`#multi-btn-pencil-${player.id}`);
+  const xButton = panel.querySelector(`#multi-btn-x-${player.id}`);
+  const hintButton = panel.querySelector(`#tutorial-player-hint-${player.id}`);
+  pencilButton.onclick = () => {
+    player.activeTool = "pencil";
+    pencilButton.classList.add('active');
+    xButton.classList.remove('active');
+  };
+  xButton.onclick = () => {
+    player.activeTool = "x";
+    pencilButton.classList.remove('active');
+    xButton.classList.add('active');
+  };
+  hintButton.onclick = () => showNextTeamTutorialHintForPlayer(player.id);
+}
+
+function beginTeamTutorialCountdown() {
+  stopTeamTutorialCountdown();
+
+  const playScreen = document.getElementById('multi-play-screen');
+  const overlay = document.createElement('div');
+  overlay.id = 'team-tutorial-countdown';
+  overlay.className = 'team-tutorial-countdown';
+  overlay.innerHTML = `
+    <span>6명 모두 손을 준비해요!</span>
+    <strong>3</strong>
+    <small>같은 순간에 시작합니다</small>
+  `;
+  playScreen.appendChild(overlay);
+
+  let count = 3;
+  teamTutorialState.countdownInterval = setInterval(() => {
+    count--;
+    const number = overlay.querySelector('strong');
+    if (count > 0) {
+      number.innerText = count;
+      playSound('x');
+      return;
+    }
+
+    clearInterval(teamTutorialState.countdownInterval);
+    teamTutorialState.countdownInterval = null;
+    number.innerText = '시작!';
+    overlay.classList.add('go');
+
+    const sharedStartTime = new Date().getTime();
+    gameStartTime = sharedStartTime;
+    multiPlayers.forEach(player => {
+      player.startActive = true;
+      player.startTime = sharedStartTime;
+      const timer = document.getElementById(`multi-timer-${player.id}`);
+      if (timer) timer.innerText = '⏱️ 0초';
+    });
+    startMultiTimer();
+    playSound('pencil');
+
+    setTimeout(() => {
+      if (overlay.isConnected) overlay.remove();
+    }, 650);
+  }, 1000);
+}
+
+function stopTeamTutorialCountdown() {
+  if (teamTutorialState.countdownInterval) {
+    clearInterval(teamTutorialState.countdownInterval);
+    teamTutorialState.countdownInterval = null;
+  }
+  const overlay = document.getElementById('team-tutorial-countdown');
+  if (overlay) overlay.remove();
+}
+
+function clearTeamTutorialHighlights() {
+  document.querySelectorAll('.tutorial-highlight').forEach(element => {
+    element.classList.remove('tutorial-highlight');
+  });
+}
+
+function clearTeamTutorialPlayerHighlights(playerId) {
+  const area = document.getElementById(`multi-board-area-${playerId}`);
+  area?.querySelectorAll('.tutorial-highlight').forEach(element => {
+    element.classList.remove('tutorial-highlight');
+  });
+}
+
+function showNextTeamTutorialHintForPlayer(playerId, playFeedback = true) {
+  if (!teamTutorialState.active) return;
+  const player = multiPlayers.find(item => item.id === playerId);
+  if (!player || player.finished || player.courseFinished) return;
+
+  const stage = TEAM_TUTORIAL_STAGES[player.tutorialStageIndex];
+  if (!stage?.hints.length) return;
+
+  clearTeamTutorialPlayerHighlights(playerId);
+  player.hintIndex = (player.hintIndex + 1) % stage.hints.length;
+  const hint = stage.hints[player.hintIndex];
+  const area = document.getElementById(`multi-board-area-${player.id}`);
+  if (!area) return;
+
+  (hint.rows || []).forEach(row => {
+    area.querySelector(`.row-header-cell[data-row="${row}"]`)?.classList.add('tutorial-highlight');
+  });
+  (hint.cols || []).forEach(col => {
+    area.querySelector(`.col-header-cell[data-col="${col}"]`)?.classList.add('tutorial-highlight');
+  });
+  (hint.cells || []).forEach(([row, col]) => {
+    area.querySelector(`.nono-cell[data-r="${row}"][data-c="${col}"]`)?.classList.add('tutorial-highlight');
+  });
+
+  const tip = document.getElementById(`tutorial-player-tip-${player.id}`);
+  if (tip) tip.innerText = `👉 ${hint.text}`;
+  const hintButton = document.getElementById(`tutorial-player-hint-${player.id}`);
+  if (hintButton) hintButton.innerText = `💡 ${player.hintIndex + 1}/${stage.hints.length}`;
+  if (playFeedback) playSound('x');
+}
+
+function showNextTeamTutorialHint() {
+  if (!teamTutorialState.active) return;
+  multiPlayers.forEach(player => showNextTeamTutorialHintForPlayer(player.id, false));
+  document.getElementById('tutorial-easy-tip').innerText = '👉 각자 풀고 있는 단계에 맞는 다음 힌트를 표시했어요.';
+  playSound('x');
+}
+
+function finishTeamTutorialPlayer(player) {
+  if (player.finished) return;
+  player.finished = true;
+  player.startActive = false;
+  player.finishedTime = new Date().getTime();
+  player.elapsedSeconds = player.startTime
+    ? Math.max(0, Math.floor((player.finishedTime - player.startTime) / 1000))
+    : 0;
+  player.progress = 100;
+
+  const isLastStage = player.tutorialStageIndex === TEAM_TUTORIAL_STAGES.length - 1;
+  player.courseFinished = isLastStage;
+
+  const panel = document.getElementById(`player-panel-${player.id}`);
+  const progress = document.getElementById(`multi-progress-${player.id}`);
+  const timer = document.getElementById(`multi-timer-${player.id}`);
+  if (progress) progress.innerText = '100%';
+  if (timer) timer.innerText = `✅ ${player.elapsedSeconds}초`;
+  if (panel) {
+    panel.classList.add('tutorial-finished');
+    const badge = document.createElement('div');
+    badge.className = 'tutorial-finished-badge';
+    badge.innerHTML = isLastStage
+      ? '<strong>8단계 모두 완료!</strong><span>로직 박사가 되었어요 🏆</span>'
+      : `<strong>${player.tutorialStageIndex + 1}단계 완성!</strong><span>2초 뒤 내 다음 단계로 가요</span><button type="button" class="tutorial-next-btn">바로 다음 공부 →</button>`;
+    panel.appendChild(badge);
+    badge.querySelector('.tutorial-next-btn')?.addEventListener('click', () => advanceTeamTutorialPlayer(player.id));
+  }
+  playSound('clear');
+  updateTeamTutorialClassStatus();
+
+  if (!isLastStage) {
+    player.autoNextTimeout = setTimeout(() => advanceTeamTutorialPlayer(player.id), 2000);
+  }
+
+  if (multiPlayers.every(item => item.courseFinished) && !teamTutorialState.stageCompleteShown) {
+    teamTutorialState.stageCompleteShown = true;
+    stopMultiTimer();
+    startConfetti();
+    playSound('win');
+    setTimeout(() => {
+      if (teamTutorialState.active) showTeamTutorialCourseComplete();
+    }, 500);
+  }
+}
+
+function advanceTeamTutorialPlayer(playerId) {
+  if (!teamTutorialState.active) return;
+  const player = multiPlayers.find(item => item.id === playerId);
+  if (!player || player.courseFinished || !player.finished) return;
+
+  const nextStageIndex = player.tutorialStageIndex + 1;
+  if (!setTeamTutorialPlayerStage(player, nextStageIndex)) return;
+
+  renderTeamTutorialPlayerPanel(player);
+  player.startActive = true;
+  player.startTime = new Date().getTime();
+  const timer = document.getElementById(`multi-timer-${player.id}`);
+  if (timer) timer.innerText = '⏱️ 0초';
+  updateTeamTutorialClassStatus();
+  playSound('pencil');
+}
+
+function updateTeamTutorialClassStatus() {
+  const completed = multiPlayers.filter(player => player.courseFinished).length;
+  const moving = multiPlayers.filter(player => player.finished && !player.courseFinished).length;
+  const status = document.getElementById('tutorial-complete-count');
+  if (status) status.innerText = `과정 완료 ${completed} / 6${moving ? ` · 이동 중 ${moving}명` : ''}`;
+
+  const activePlayers = multiPlayers.filter(player => !player.courseFinished);
+  if (!activePlayers.length) {
+    document.getElementById('tutorial-lesson-index').innerText = '8 / 8';
+    document.getElementById('tutorial-lesson-title').innerText = '6명 모두 개별 과정 완료!';
+    document.getElementById('tutorial-lesson-text').innerText = '각자 자기 속도로 8단계를 모두 끝냈어요.';
+    document.getElementById('tutorial-easy-tip').innerText = '🏆 숫자, X표, 교차, 겹치는 칸 찾기를 모두 배웠어요.';
+    document.getElementById('tutorial-size-badge').innerText = '개인별 8단계 완료';
+    return;
+  }
+
+  const stageIndexes = [...new Set(activePlayers.map(player => player.tutorialStageIndex))];
+  if (stageIndexes.length === 1) {
+    const stageIndex = stageIndexes[0];
+    renderTeamTutorialLesson(TEAM_TUTORIAL_STAGES[stageIndex], stageIndex);
+    return;
+  }
+
+  const stageCounts = activePlayers.reduce((counts, player) => {
+    const key = player.tutorialStageIndex + 1;
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+  const distribution = Object.entries(stageCounts)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([stage, count]) => `${stage}단계 ${count}명`)
+    .join(' · ');
+
+  document.getElementById('multi-play-title').innerText = '🏫 6명 함께 배우기 · 각자 속도로 진행 중';
+  document.getElementById('tutorial-lesson-index').innerText = '개별 진행';
+  document.getElementById('tutorial-lesson-title').innerText = '서로 다른 단계를 동시에 공부해요';
+  document.getElementById('tutorial-lesson-text').innerText = distribution;
+  document.getElementById('tutorial-easy-tip').innerText = '💡 자기 판의 힌트 버튼을 누르면 현재 문제에 맞는 쉬운 풀이가 나와요.';
+  document.getElementById('tutorial-size-badge').innerText = '3 × 3 ~ 6 × 6 · 개인별';
+  document.getElementById('btn-team-tutorial-hint').innerText = '💡 모두 다음 힌트';
+}
+
+function showTeamTutorialCourseComplete() {
+  const modal = document.getElementById('clear-modal');
+  const title = document.getElementById('modal-title');
+  const bodyText = document.getElementById('modal-body');
+  const actionButton = document.getElementById('modal-action-btn');
+
+  title.innerText = '🏆 6명 모두 로직 박사!';
+  bodyText.innerHTML = `6명이 각자 자기 속도로 숫자 읽기, X표, 묶음 사이 띄우기, 가로세로 교차, 겹치는 칸 찾기까지 모두 배웠어요.<br><strong>막히면 큰 숫자와 0부터 찾는 것</strong>을 기억하세요!`;
+  actionButton.innerText = '수업 준비 화면으로';
+  actionButton.onclick = () => {
+    modal.classList.remove('active');
+    try {
+      localStorage.setItem('nemonemo_team_tutorial_complete', 'true');
+    } catch (error) {
+      console.warn('튜토리얼 완료 기록 저장 실패:', error);
+    }
+    leaveTeamTutorial();
+  };
+  modal.classList.add('active');
+}
+
+function leaveTeamTutorial() {
+  stopTeamTutorialCountdown();
+  stopMultiTimer();
+  clearTeamTutorialHighlights();
+  multiPlayers.forEach(clearTeamTutorialPlayerAdvance);
+  teamTutorialState.active = false;
+  selectedMultiMode = "normal";
+  activePointerDowns = {};
+  dragStartValues = {};
+  document.getElementById('clear-modal').classList.remove('active');
+  document.getElementById('multi-play-screen').classList.remove('tutorial-mode');
+  document.getElementById('team-tutorial-lesson-bar').hidden = true;
+  document.getElementById('team-tutorial-bottom-bar').hidden = true;
+  document.querySelector('.multi-global-bottom-bar').hidden = false;
+  showScreen('team-tutorial-lobby-screen');
+}
+
 // === 멀티플레이 로비 (설정) 구현 ===
 function setupMultiLobbyForm() {
+  selectedMultiMode = "normal";
   selectedMultiPlayerCount = 2;
   selectedMultiSize = 3;
   
   // 플레이어 수 버튼들 탭
   const btnGroup = document.getElementById('multi-player-count-btns');
   btnGroup.innerHTML = '';
-  const counts = [1, 2, 4];
+  const counts = [2, 3, 4, 5, 6];
   counts.forEach(i => {
     const btn = document.createElement('button');
     btn.className = `p-count-btn ${i === 2 ? 'active' : ''}`;
@@ -1090,7 +1619,7 @@ function updatePlayerNameInputs(count) {
   const container = document.getElementById('multi-player-names-grid');
   container.innerHTML = '';
 
-  const defaultNames = ["초록 개구리", "노랑 병아리", "하늘 토끼", "빨간 무당벌레"];
+  const defaultNames = ["초록 개구리", "노랑 병아리", "하늘 토끼", "빨간 무당벌레", "보라 고래", "민트 공룡"];
 
   for (let i = 1; i <= count; i++) {
     const input = document.createElement('input');
@@ -1105,7 +1634,10 @@ function updatePlayerNameInputs(count) {
 
 // === 멀티플레이 게임 작동 ===
 function startMultiPlay() {
-  const nameInputs = document.querySelectorAll('.player-name-input');
+  selectedMultiMode = "normal";
+  teamTutorialState.active = false;
+  stopTeamTutorialCountdown();
+  const nameInputs = document.querySelectorAll('#multi-player-names-grid .player-name-input');
   
   // 기본 디폴트 퍼즐: 선택한 selectedMultiSize 에 어댑팅하여 1단계 마련
   let defaultPuzzle;
@@ -1148,6 +1680,11 @@ function startMultiPlay() {
 
   // UI 세팅
   document.getElementById('multi-play-title').innerText = "🏫 네모네모 로직 교실";
+  const playScreen = document.getElementById('multi-play-screen');
+  playScreen.classList.remove('tutorial-mode');
+  document.getElementById('team-tutorial-lesson-bar').hidden = true;
+  document.getElementById('team-tutorial-bottom-bar').hidden = true;
+  document.querySelector('.multi-global-bottom-bar').hidden = false;
   const gridContainer = document.getElementById('multi-play-grid');
   gridContainer.innerHTML = '';
   
@@ -1163,7 +1700,7 @@ function startMultiPlay() {
     // 내부 HTML 틀 생성
     panel.innerHTML = `
       <div class="player-hud">
-        <span class="player-title">👤 ${p.name}</span>
+        <span class="player-title">👤 ${escapeHtml(p.name)}</span>
         <span id="multi-timer-${p.id}" class="player-timer">⏱️ 대기</span>
         <span style="font-size:0.9rem;color:#e11d48;">❌ <span id="multi-errors-${p.id}">0</span></span>
         <span id="multi-progress-${p.id}" class="player-progress">0%</span>
@@ -1178,7 +1715,7 @@ function startMultiPlay() {
       <div class="start-overlay" id="start-overlay-${p.id}">
         <div class="start-overlay-title">문제를 골라보세요!</div>
         <select id="stage-select-${p.id}" class="player-name-input" style="width: 85%; font-weight: bold; margin-bottom: 12px; font-size: 0.9rem; text-align: center;" onchange="changePlayerPuzzle(${p.id}, this.value)">
-          ${buildStageDropdownOptions()}
+          ${buildStageDropdownOptions(p.currentSize)}
         </select>
         <button type="button" class="start-play-btn" onclick="activateMultiPlayer(${p.id})">▶️ 시작!</button>
       </div>
@@ -1476,8 +2013,9 @@ function triggerCooldownPenalty(playerId, state) {
   // 드래그/터치 락 상태 강제 해제
   if (playerId === 'solo') {
     isPointerDown = false;
+    soloPointerId = null;
   } else {
-    activePointerDowns[playerId] = false;
+    delete activePointerDowns[playerId];
   }
 
   let targetContainer;

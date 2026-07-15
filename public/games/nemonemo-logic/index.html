@@ -22,6 +22,11 @@
     <!-- [1] 홈 화면 (모드 선택) -->
     <div id="home-screen" class="screen active">
       <div class="menu-grid">
+        <div class="menu-card tutorial" id="btn-goto-team-tutorial" role="button" tabindex="0">
+          <span class="icon">🏫</span>
+          <h2>6명 함께 배우기</h2>
+          <p><strong>6명이 동시에 시작!</strong><br>3·4·5·6칸을 차례로 풀며 쉬운 풀이법까지 배워요.</p>
+        </div>
         <div class="menu-card solo" id="btn-goto-solo">
           <span class="icon">👦</span>
           <h2>혼자서 척척!</h2>
@@ -35,7 +40,55 @@
       </div>
     </div>
 
-    <!-- [2] 1인용 로비 (레벨 선택) -->
+    <!-- [2] 6인 동시 튜토리얼 준비 화면 -->
+    <div id="team-tutorial-lobby-screen" class="screen">
+      <div class="lobby-header tutorial-lobby-header">
+        <button class="back-btn back-to-home" type="button">🏠 처음으로</button>
+        <div class="tutorial-lobby-heading">
+          <span class="eyebrow">네모네모 로직 교실</span>
+          <h2>🏫 6명 함께 배우기</h2>
+          <p>같은 설명을 듣고 같은 순간에 시작해요.</p>
+        </div>
+        <div class="tutorial-player-count-badge">👥 6명 고정</div>
+      </div>
+
+      <div class="tutorial-lobby-layout">
+        <section class="tutorial-curriculum" aria-labelledby="tutorial-curriculum-title">
+          <div class="tutorial-section-title">
+            <span>오늘 배울 순서</span>
+            <strong id="tutorial-curriculum-title">8개의 짧은 연습</strong>
+          </div>
+          <div class="tutorial-size-path">
+            <div class="tutorial-size-step size-3"><span>1–2</span><strong>3 × 3</strong><small>숫자와 X표</small></div>
+            <div class="tutorial-path-arrow">→</div>
+            <div class="tutorial-size-step size-4"><span>3–4</span><strong>4 × 4</strong><small>띄어 칠하기</small></div>
+            <div class="tutorial-path-arrow">→</div>
+            <div class="tutorial-size-step size-5"><span>5–6</span><strong>5 × 5</strong><small>겹치는 칸 찾기</small></div>
+            <div class="tutorial-path-arrow">→</div>
+            <div class="tutorial-size-step size-6"><span>7–8</span><strong>6 × 6</strong><small>쉬운 줄부터</small></div>
+          </div>
+          <ul class="tutorial-rule-list">
+            <li><strong>숫자 뜻:</strong> 이어서 칠할 칸의 수를 읽어요.</li>
+            <li><strong>빈칸 표시:</strong> 0인 줄과 다 푼 줄은 X로 지워요.</li>
+            <li><strong>쉬운 풀이:</strong> 꽉 차는 줄 → 겹치는 칸 → 가로세로 교차 순서로 찾아요.</li>
+          </ul>
+        </section>
+
+        <section class="tutorial-roster" aria-labelledby="tutorial-roster-title">
+          <div class="tutorial-section-title">
+            <span>함께할 친구</span>
+            <strong id="tutorial-roster-title">이름을 확인해 주세요</strong>
+          </div>
+          <div id="tutorial-player-names-grid" class="tutorial-player-names-grid"></div>
+          <button type="button" class="start-btn tutorial-start-btn" id="btn-start-team-tutorial">
+            <span>3초 뒤 6명 동시에 시작!</span>
+            <strong>수업 시작 🚀</strong>
+          </button>
+        </section>
+      </div>
+    </div>
+
+    <!-- [3] 1인용 로비 (레벨 선택) -->
     <div id="solo-lobby-screen" class="screen" style="flex-direction: column; justify-content: space-between; height: 100%;">
       <!-- 상단 제목: 순수 정보 노출 -->
       <div class="lobby-header" style="width: 100%; border-bottom: none; margin-bottom: 5px; justify-content: center; padding-bottom: 2px;">
@@ -71,7 +124,7 @@
       </div>
     </div>
 
-    <!-- [3] 1인용 플레이 화면 -->
+    <!-- [4] 1인용 플레이 화면 -->
     <div id="solo-play-screen" class="screen">
       <!-- 헤더는 제목만 표시 -->
       <div class="lobby-header" style="width: 100%; margin-bottom: 5px; justify-content: center; border-bottom: none;">
@@ -107,7 +160,7 @@
       </div>
     </div>
 
-    <!-- [4] 함께 하기 로비 (설정 화면) -->
+    <!-- [5] 함께 하기 로비 (설정 화면) -->
     <div id="multi-lobby-screen" class="screen">
       <div class="lobby-header" style="width:100%;">
         <button class="back-btn back-to-home" type="button">🏠 처음으로</button>
@@ -152,8 +205,7 @@
       </form>
     </div>
 
-    <!-- [5] 함께 하기 플레이 화면 -->
-    <!-- [5] 함께 하기 플레이 화면 -->
+    <!-- [6] 함께 하기 / 6인 튜토리얼 플레이 화면 -->
     <div id="multi-play-screen" class="screen" style="flex-direction: column; justify-content: space-between;">
       <!-- 상단 정보 헤더: 정보만 노출 -->
       <div class="lobby-header" style="width: 100%; border-bottom: none; margin-bottom: 4px; justify-content: space-between; padding-bottom: 2px;">
@@ -162,6 +214,16 @@
         <div class="back-btn" style="background:#f1f5f9; border-color:#cbd5e1; cursor:default; pointer-events:none; margin: 0; font-size: 0.95rem; height: 36px; padding: 0 12px; display: flex; align-items: center;">
           ⏱️ <span id="multi-timer-val">00:00</span>
         </div>
+      </div>
+
+      <!-- 6인 튜토리얼에서만 보이는 공통 수업 안내 -->
+      <div id="team-tutorial-lesson-bar" class="team-tutorial-lesson-bar" hidden>
+        <div class="tutorial-lesson-index" id="tutorial-lesson-index">1 / 8</div>
+        <div class="tutorial-lesson-copy">
+          <strong id="tutorial-lesson-title">숫자는 이어진 칸의 수예요</strong>
+          <span id="tutorial-lesson-text">힌트 숫자만큼 이어서 칠해요.</span>
+        </div>
+        <div class="tutorial-easy-tip" id="tutorial-easy-tip">💡 가장 큰 숫자가 있는 줄부터 찾아요.</div>
       </div>
 
       <!-- 플레이어 그리드 분할 영역 -->
@@ -173,11 +235,20 @@
       <div class="multi-global-bottom-bar" style="width: 100%; display: flex; justify-content: center; margin-top: 2px;">
         <button class="back-btn" id="btn-multi-back-to-lobby" onclick="showScreen('multi-lobby-screen')" type="button" style="margin: 0; width: clamp(200px, 30vw, 400px); font-size: 1.05rem; padding: 10px 20px; height: 42px; text-align: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">⬅️ 나가기 (설정으로)</button>
       </div>
+
+      <div id="team-tutorial-bottom-bar" class="team-tutorial-bottom-bar" hidden>
+        <button class="back-btn" id="btn-team-tutorial-exit" type="button">⬅️ 수업 준비로</button>
+        <div class="tutorial-class-status">
+          <span id="tutorial-size-badge">3 × 3</span>
+          <strong id="tutorial-complete-count">완료 0 / 6</strong>
+        </div>
+        <button class="tutorial-hint-btn" id="btn-team-tutorial-hint" type="button">💡 쉬운 풀이 1단계</button>
+      </div>
     </div>
 
   </div>
 
-  <!-- [6] 공통 알림 / 축하 모달 -->
+  <!-- [7] 공통 알림 / 축하 모달 -->
   <div id="clear-modal" class="modal-overlay">
     <div class="popup">
       <div class="popup-img">🎉</div>

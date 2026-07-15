@@ -30,7 +30,7 @@ export async function getGames(): Promise<GameMetadata[]> {
         if (meta.name) customName = meta.name;
         if (meta.externalUrl) externalUrl = meta.externalUrl;
         if (meta.iconUrl) iconUrl = meta.iconUrl;
-      } catch (err) {
+      } catch {
         // metadata.json probably doesn't exist, which is fine
       }
 
@@ -48,8 +48,8 @@ export async function getGames(): Promise<GameMetadata[]> {
     }
     
     return games;
-  } catch (err: any) {
-    if (err.code === 'ENOENT') {
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err !== null && 'code' in err && err.code === 'ENOENT') {
       // Directory doesn't exist yet
       return [];
     }

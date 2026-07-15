@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>시계 바늘을 돌려요</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --text-dark: #0f172a;
+    --text-light: #e2e8f0;
+    --accent: #10b981; /* 성공 초록 */
+    --accent-hover: #059669;
+    --wrong: #ef4444;
+    --hour-color: #ef4444; /* 시침 빨강 */
+    --min-color: #3b82f6;  /* 분침 파랑 */
+    --guide-color: rgba(251, 191, 36, 0.45); /* 가이드 노랑/주황 */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', 'Nanum Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    overflow: hidden;
+  }
+  #games {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  .game {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end; /* 조작계와 시계를 바닥으로 밀착 */
+    padding: 12px 10px 16px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    transition: border-color 0.3s;
+  }
+  .game.success-pulse {
+    border-color: var(--accent);
+    animation: success-glow 1.5s ease-out;
+  }
+  @keyframes success-glow {
+    0%, 100% { border-color: rgba(255, 255, 255, 0.05); }
+    30%, 70% { border-color: var(--accent); }
+  }
+
+  /* 패널 상단: HUD (점수판) */
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: auto; /* 상단 고정 */
+    background: rgba(15, 23, 42, 0.4);
+    padding: 6px 12px;
+    border-radius: 10px;
+  }
+  .hud .player-name {
+    font-weight: 800;
+    font-size: clamp(0.85rem, 1.4vw, 1.1rem);
+    color: #94a3b8;
+  }
+  .hud .score-box {
+    font-weight: 800;
+    font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+    color: #38bdf8;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 패널 상/중단: 미션 & 가이드 텍스트 */
+  .mission-container {
+    width: 100%;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: auto; /* 시계를 하단으로 밀기 위함 */
+    padding: 0 4px;
+  }
+  .mission-title {
+    font-size: clamp(1.2rem, 2vw, 1.8rem);
+    font-weight: 900;
+    color: #f59e0b; /* 노란색 계열 강조 */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    margin-bottom: 8px;
+    line-height: 1.2;
+    word-break: keep-all;
+  }
+  .guide-text {
+    font-size: clamp(0.75rem, 1.2vw, 0.95rem);
+    color: #a7f3d0; /* 연한 초록 가이드 */
+    font-weight: 600;
+    line-height: 1.4;
+    min-height: 2.8em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: keep-all;
+    background: rgba(16, 185, 129, 0.08);
+    border-radius: 8px;
+    padding: 4px 8px;
+  }
+
+  /* 패널 하단: 시계 영역 */
+  .clock-container {
+    width: 100%;
+    max-width: min(90%, 34vh);
+    margin-bottom: 12px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .clock-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));
+  }
+
+  /* 패널 최하단: 바닥 컨트롤 버튼 */
+  .control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: min(95%, 34vh);
+  }
+
+  .ctrl-btn {
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: clamp(0.9rem, 1.5vw, 1.15rem);
+    padding: clamp(10px, 1.6vh, 15px) 4px;
+    cursor: pointer;
+    touch-action: none;
+    transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  }
+
+  .ctrl-btn:active {
+    transform: scale(0.92);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  /* 시침 조절 버튼 (빨강 테마) */
+  .ctrl-btn.hour {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    border-bottom: 4px solid #7f1d1d;
+  }
+  .ctrl-btn.hour:active {
+    border-bottom-width: 1px;
+    margin-top: 3px;
+  }
+
+  /* 분침 조절 버튼 (파랑 테마) */
+  .ctrl-btn.minute {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    border-bottom: 4px solid #1e3a8a;
+  }
+  .ctrl-btn.minute:active {
+    border-bottom-width: 1px;
+    margin-top: 3px;
+  }
+
+  /* 성공 피드백 오버레이 */
+  .success-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(16, 185, 129, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    backdrop-filter: blur(2px);
+  }
+  .success-overlay.show {
+    opacity: 1;
+  }
+  .success-overlay.completed-state {
+    pointer-events: auto; /* Enable touch/clicks for restart button */
+    background: rgba(16, 185, 129, 0.98);
+  }
+  .success-overlay .stamp {
+    font-size: clamp(3rem, 6vw, 4.5rem);
+    animation: stamp-bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+  .success-overlay .message {
+    font-size: clamp(1.2rem, 2vw, 1.8rem);
+    font-weight: 900;
+    color: white;
+    margin-top: 10px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .success-overlay .inner-restart-btn {
+    border: none;
+    border-radius: 10px;
+    background: #fbbf24;
+    color: #0f172a;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: clamp(0.8rem, 1.4vw, 1.15rem);
+    padding: 10px 22px;
+    margin-top: 18px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    transition: all 0.15s ease;
+    touch-action: none;
+  }
+  .success-overlay .inner-restart-btn:active {
+    transform: scale(0.92);
+    background: #fcd34d;
+  }
+
+  @keyframes stamp-bounce {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* 메인 게임 오버레이 (인원 선택 및 결과창) */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 100;
+    padding: 20px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay .title {
+    font-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    font-weight: 900;
+    text-align: center;
+    color: #fbbf24;
+    text-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    word-break: keep-all;
+  }
+  .overlay .subtitle {
+    font-size: clamp(0.9rem, 1.8vw, 1.3rem);
+    color: #94a3b8;
+    text-align: center;
+    margin-top: -10px;
+    margin-bottom: 10px;
+    word-break: keep-all;
+  }
+  .overlay .btn-group {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    max-width: 600px;
+  }
+  .overlay .btn-group button {
+    flex: 1;
+    border: none;
+    border-radius: 16px;
+    background: #10b981;
+    color: #0f172a;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: clamp(1rem, 2.2vw, 1.45rem);
+    padding: clamp(14px, 2.5vh, 22px) 8px;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(16,185,129,0.3);
+    transition: all 0.2s;
+  }
+  .overlay .btn-group button:hover {
+    background: #34d399;
+    transform: translateY(-2px);
+  }
+  .overlay .btn-group button:active {
+    transform: translateY(1px);
+  }
+
+  /* 결과창 전용 스타일 */
+  .overlay.result-mode {
+    background: rgba(15, 23, 42, 0.98);
+  }
+  .overlay .cup {
+    font-size: 5rem;
+    animation: cup-float 2s ease-in-out infinite;
+  }
+  @keyframes cup-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .overlay .congrats {
+    font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+    font-weight: 800;
+    color: #e2e8f0;
+    text-align: center;
+  }
+  .overlay .restart-btn {
+    border: none;
+    border-radius: 14px;
+    background: #fbbf24;
+    color: #0f172a;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: 1.2rem;
+    padding: 12px 36px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(251,191,36,0.3);
+    transition: all 0.2s;
+  }
+  .overlay .restart-btn:hover {
+    background: #fcd34d;
+    transform: translateY(-2px);
+  }
+
+  /* 6인용 등 플레이어 수별 반응형 보정 */
+  .players-6 .mission-title { font-size: clamp(0.95rem, 1.5vw, 1.25rem); }
+  .players-6 .guide-text { font-size: clamp(0.68rem, 1vw, 0.8rem); min-height: 3.2em; padding: 2px 4px; }
+  .players-6 .ctrl-btn { font-size: clamp(0.78rem, 1.2vw, 0.95rem); padding: 8px 2px; border-radius: 8px; }
+  .players-6 .hud .player-name { font-size: 0.75rem; }
+  .players-6 .hud .score-box { font-size: 0.8rem; }
+  .players-6 .game { padding: 8px 4px 10px; }
+
+  .players-2 .mission-title { font-size: clamp(1.3rem, 2.5vw, 2.2rem); }
+  .players-2 .guide-text { font-size: clamp(0.85rem, 1.4vw, 1.1rem); }
+
+  .players-1 .mission-title { font-size: clamp(1.5rem, 4vw, 2.6rem); }
+  .players-1 .guide-text { font-size: clamp(0.95rem, 2.2vw, 1.3rem); max-width: 500px; margin: 0 auto; }
+  .players-1 .clock-container { max-width: min(75%, 45vh); }
+  .players-1 .control-grid { max-width: min(80%, 45vh); gap: 12px; }
+  .players-1 .ctrl-btn { font-size: clamp(1.1rem, 2.5vw, 1.4rem); padding: 18px 8px; }
+
+</style>
+</head>
+<body>
+
+<div id="games"></div>
+
+<!-- 인원수 선택 오버레이 -->
+<div id="setup-overlay" class="overlay">
+  <div class="title">⏱️ 시계 바늘을 돌려요</div>
+  <div class="subtitle">시계를 돌려 문제를 맞춰 보아요 (1학년 맞춤형)</div>
+  <div class="btn-group">
+    <button onclick="startGame(1)">1인용</button>
+    <button onclick="startGame(2)">2인용</button>
+    <button onclick="startGame(6)">6인용</button>
+  </div>
+</div>
+
+<!-- 게임 완료 오버레이 -->
+<div id="finish-overlay" class="overlay hidden result-mode">
+  <div class="cup">🏆</div>
+  <div class="title" id="finish-title">참 잘했어요!</div>
+  <div class="congrats" id="finish-desc">모두 시계 읽기를 완료했습니다!</div>
+  <button class="restart-btn" onclick="resetAllGames()">다시 하기</button>
+</div>
+
+<script>
+(() => {
+  // Disable right click / context menu globally
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  const TOTAL_STAGES = 5; // 각 플레이어당 5문제를 풀면 완료
+  let PLAYERS = 6;
+  let gamesData = [];
+
+  // URL 파라미터가 있으면 선택 오버레이 건너뜀
+  const params = new URLSearchParams(location.search);
+  if (params.has('players')) {
+    PLAYERS = Math.max(1, Math.min(6, parseInt(params.get('players'), 10) || 6));
+    document.getElementById('setup-overlay').classList.add('hidden');
+    initGames();
+  }
+
+  window.startGame = (num) => {
+    PLAYERS = num;
+    document.getElementById('setup-overlay').classList.add('hidden');
+    // URL 업데이트
+    history.pushState(null, '', `?players=${num}`);
+    initGames();
+  };
+
+  // Web Audio 오디오 컨텍스트 공유 싱글톤
+  let audioCtx = null;
+  function getAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  function playSuccessSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      // 도-미-솔-도 멜로디
+      const notes = [261.63, 329.63, 392.00, 523.25];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+
+        gain.gain.setValueAtTime(0.15, now + idx * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.25);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + idx * 0.1);
+        osc.stop(now + idx * 0.1 + 0.3);
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  function playClickSound() {
+    try {
+      const ctx = getAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.04);
+
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + 0.04);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } catch (e) { console.error(e); }
+  }
+
+  // 1학년용 시계 미션 생성 (몇 시 정각 / 몇 시 30분)
+  function generateMission() {
+    const hour = Math.floor(Math.random() * 12) + 1; // 1 ~ 12
+    const min = Math.random() < 0.5 ? 0 : 30;       // 0분 또는 30분
+    return { hour, min };
+  }
+
+  function getGuideText(hour, min) {
+    if (min === 0) {
+      return `짧은 바늘(빨강) ➔ ${hour}<br>긴 바늘(파랑) ➔ 12 (0분)`;
+    } else {
+      const nextHour = hour === 12 ? 1 : hour + 1;
+      return `짧은 바늘(빨강) ➔ ${hour}와 ${nextHour}의 가운데<br>긴 바늘(파랑) ➔ 6 (30분)`;
+    }
+  }
+
+  function initGames() {
+    const container = document.getElementById('games');
+    container.innerHTML = '';
+    container.className = `players-${PLAYERS}`;
+
+    gamesData = [];
+
+    for (let p = 0; p < PLAYERS; p++) {
+      const gameDiv = document.createElement('div');
+      gameDiv.className = 'game';
+      gameDiv.id = `game-${p}`;
+
+      // 첫 문제 생성
+      const mission = generateMission();
+
+      // 초기 사용자 바늘 시간 (미션과 다르게 배치)
+      let initialHour = (mission.hour + 4) % 12 || 12;
+      let initialMin = mission.min === 0 ? 30 : 0;
+
+      const pData = {
+        playerIndex: p,
+        targetHour: mission.hour,
+        targetMinute: mission.min,
+        currentHour: initialHour,
+        currentMinute: initialMin,
+        score: 0,
+        completed: false,
+        isDragging: null, // 'hour' or 'minute' or null
+        activePointerId: null, // Track pointer ID to prevent multi-touch overlaps
+      };
+
+      gamesData.push(pData);
+
+      // HTML 렌더링
+      gameDiv.innerHTML = `
+        <div class="hud">
+          <div class="player-name">${p + 1}번 자리</div>
+          <div class="score-box" id="score-${p}">맞춘 수: 0 / ${TOTAL_STAGES}</div>
+        </div>
+
+        <div class="mission-container">
+          <div class="mission-title" id="mission-title-${p}">${mission.hour}시 ${mission.min === 30 ? '30분' : ''}을 만들어 봐요!</div>
+          <div class="guide-text" id="guide-text-${p}">${getGuideText(mission.hour, mission.min)}</div>
+        </div>
+
+        <div class="clock-container">
+          <!-- SVG Clock -->
+          <svg viewBox="0 0 300 300" class="clock-svg" id="svg-${p}">
+            <!-- Clock Dial Background -->
+            <circle cx="150" cy="150" r="138" fill="#f8fafc" stroke="#cbd5e1" stroke-width="6"/>
+            <circle cx="150" cy="150" r="126" fill="#ffffff"/>
+
+            <!-- Outer Minute Text Hints for 1st grade (0min & 30min highlight) -->
+            <text x="150" y="58" font-family="inherit" font-size="10" font-weight="800" fill="#3b82f6" text-anchor="middle">0분</text>
+            <text x="150" y="252" font-family="inherit" font-size="10" font-weight="800" fill="#3b82f6" text-anchor="middle">30분</text>
+
+            <!-- Mini minute numbers (5,10,15...) to aid reading -->
+            ${generateMinuteHints()}
+
+            <!-- Clock Hour Numbers (1-12) -->
+            ${generateClockNumbers()}
+
+            <!-- Clock ticks -->
+            ${generateClockTicks()}
+
+            <!-- Rotating Direction Guide Arrow (clockwise hint) -->
+            <path d="M 215 110 A 75 75 0 0 1 215 190" fill="none" stroke="#e2e8f0" stroke-width="4" stroke-dasharray="4 3" stroke-linecap="round"/>
+            <path d="M 213 194 L 221 186 M 213 194 L 207 187" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
+
+            <!-- [Guide Hands] Ghost reflection of correct answer -->
+            <line id="guide-min-${p}" x1="150" y1="150" x2="150" y2="40" stroke="rgba(59, 130, 246, 0.22)" stroke-width="6" stroke-linecap="round"/>
+            <line id="guide-hour-${p}" x1="150" y1="150" x2="150" y2="75" stroke="rgba(239, 68, 68, 0.22)" stroke-width="10" stroke-linecap="round"/>
+
+            <!-- [Actual Hands] Player-controlled hands -->
+            <!-- Minute Hand (Blue, Longer) -->
+            <line id="hand-min-${p}" x1="150" y1="150" x2="150" y2="35" stroke="var(--min-color)" stroke-width="6" stroke-linecap="round"/>
+            <!-- Hour Hand (Red, Shorter) -->
+            <line id="hand-hour-${p}" x1="150" y1="150" x2="150" y2="70" stroke="var(--hour-color)" stroke-width="10" stroke-linecap="round"/>
+
+            <!-- Center Pin -->
+            <circle cx="150" cy="150" r="10" fill="#1e293b"/>
+            <circle cx="150" cy="150" r="4" fill="#ffffff"/>
+
+            <!-- Interactive Large Touch Handles (Invisible/Semi-transparent overlays for easy drag) -->
+            <!-- Hour handle (Red ring) -->
+            <circle id="handle-hour-${p}" cx="150" cy="70" r="22" fill="rgba(239, 68, 68, 0.15)" stroke="#ef4444" stroke-width="2" style="cursor: pointer;"/>
+            <!-- Minute handle (Blue ring) -->
+            <circle id="handle-min-${p}" cx="150" cy="35" r="22" fill="rgba(59, 130, 246, 0.15)" stroke="#3b82f6" stroke-width="2" style="cursor: pointer;"/>
+          </svg>
+        </div>
+
+        <div class="control-grid">
+          <button class="ctrl-btn hour" id="btn-h-minus-${p}">
+            <span>시침 1시간 -</span>
+          </button>
+          <button class="ctrl-btn hour" id="btn-h-plus-${p}">
+            <span>시침 1시간 +</span>
+          </button>
+          <button class="ctrl-btn minute" id="btn-m-minus-${p}">
+            <span>분침 30분 -</span>
+          </button>
+          <button class="ctrl-btn minute" id="btn-m-plus-${p}">
+            <span>분침 30분 +</span>
+          </button>
+        </div>
+
+        <div class="success-overlay" id="success-${p}">
+          <div class="stamp">💯</div>
+          <div class="message">참 잘했어요!</div>
+        </div>
+      `;
+
+      container.appendChild(gameDiv);
+
+      // 이벤트 바인딩
+      bindEvents(p);
+      updateClockVisuals(p);
+    }
+  }
+
+  // 시계 내 1~12 숫자 생성
+  function generateClockNumbers() {
+    let html = '';
+    for (let h = 1; h <= 12; h++) {
+      const angle = h * 30 * Math.PI / 180;
+      const x = 150 + 98 * Math.sin(angle);
+      const y = 150 - 98 * Math.cos(angle) + 4; // y 보정
+      html += `<text x="${x}" y="${y}" font-family="inherit" font-size="19" font-weight="900" fill="#1e293b" text-anchor="middle" dominant-baseline="middle">${h}</text>`;
+    }
+    return html;
+  }
+
+  // 1학년의 분 이해를 돕기 위한 5분 단위 연한 힌트 표시
+  function generateMinuteHints() {
+    let html = '';
+    const minutes = {3: '15분', 9: '45분'};
+    for (let h of [3, 9]) {
+      const angle = h * 30 * Math.PI / 180;
+      // 숫자 안쪽에 힌트 텍스트 배치
+      const x = 150 + 74 * Math.sin(angle);
+      const y = 150 - 74 * Math.cos(angle) + 2;
+      html += `<text x="${x}" y="${y}" font-family="inherit" font-size="8" font-weight="700" fill="#94a3b8" text-anchor="middle" dominant-baseline="middle">${minutes[h]}</text>`;
+    }
+    return html;
+  }
+
+  // 시계 눈금 선 생성
+  function generateClockTicks() {
+    let html = '';
+    for (let i = 0; i < 60; i++) {
+      const angle = i * 6;
+      const isHour = i % 5 === 0;
+      const rStart = isHour ? 120 : 123;
+      const rEnd = 126;
+      const rad = angle * Math.PI / 180;
+
+      const x1 = 150 + rStart * Math.sin(rad);
+      const y1 = 150 - rStart * Math.cos(rad);
+      const x2 = 150 + rEnd * Math.sin(rad);
+      const y2 = 150 - rEnd * Math.cos(rad);
+
+      html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isHour ? '#475569' : '#cbd5e1'}" stroke-width="${isHour ? 3 : 1.5}" stroke-linecap="round"/>`;
+    }
+    return html;
+  }
+
+  // 시각화 업데이트
+  function updateClockVisuals(p) {
+    const data = gamesData[p];
+
+    // 1. 가이드(정답) 바늘 회전 설정
+    const guideHourAngle = (data.targetHour % 12) * 30 + data.targetMinute * 0.5;
+    const guideMinAngle = data.targetMinute * 6;
+
+    const gHourHand = document.getElementById(`guide-hour-${p}`);
+    const gMinHand = document.getElementById(`guide-min-${p}`);
+
+    if (gHourHand) gHourHand.setAttribute('transform', `rotate(${guideHourAngle} 150 150)`);
+    if (gMinHand) gMinHand.setAttribute('transform', `rotate(${guideMinAngle} 150 150)`);
+
+    // 2. 실제(사용자 조작) 바늘 회전 설정
+    // 드래그 중이 아닐 때는 현재 H, M 상태값을 완벽히 반영
+    const hourAngle = (data.currentHour % 12) * 30 + data.currentMinute * 0.5;
+    const minAngle = data.currentMinute * 6;
+
+    const hourHand = document.getElementById(`hand-hour-${p}`);
+    const minHand = document.getElementById(`hand-min-${p}`);
+    const hourHandle = document.getElementById(`handle-hour-${p}`);
+    const minHandle = document.getElementById(`handle-min-${p}`);
+
+    if (hourHand) hourHand.setAttribute('transform', `rotate(${hourAngle} 150 150)`);
+    if (minHand) minHand.setAttribute('transform', `rotate(${minAngle} 150 150)`);
+
+    // 핸들(끝 부분 터치 영역) 위치 업데이트
+    if (hourHandle) {
+      const hRad = (hourAngle - 90) * Math.PI / 180;
+      hourHandle.setAttribute('cx', 150 + 70 * Math.cos(hRad));
+      hourHandle.setAttribute('cy', 150 + 70 * Math.sin(hRad));
+    }
+    if (minHandle) {
+      const mRad = (minAngle - 90) * Math.PI / 180;
+      minHandle.setAttribute('cx', 150 + 115 * Math.cos(mRad));
+      minHandle.setAttribute('cy', 150 + 115 * Math.sin(mRad));
+    }
+  }
+
+  // 드래그 중 실시간 바늘 위치 업데이트 (스냅 안 된 상태)
+  function setDragHandVisuals(p, handType, angle) {
+    const data = gamesData[p];
+    if (handType === 'hour') {
+      const hHand = document.getElementById(`hand-hour-${p}`);
+      const hHandle = document.getElementById(`handle-hour-${p}`);
+      if (hHand) hHand.setAttribute('transform', `rotate(${angle} 150 150)`);
+      if (hHandle) {
+        const rad = (angle - 90) * Math.PI / 180;
+        hHandle.setAttribute('cx', 150 + 70 * Math.cos(rad));
+        hHandle.setAttribute('cy', 150 + 70 * Math.sin(rad));
+      }
+    } else if (handType === 'minute') {
+      const mHand = document.getElementById(`hand-min-${p}`);
+      const mHandle = document.getElementById(`handle-min-${p}`);
+      if (mHand) mHand.setAttribute('transform', `rotate(${angle} 150 150)`);
+      if (mHandle) {
+        const rad = (angle - 90) * Math.PI / 180;
+        mHandle.setAttribute('cx', 150 + 115 * Math.cos(rad));
+        mHandle.setAttribute('cy', 150 + 115 * Math.sin(rad));
+      }
+
+      // 분침을 드래그하면 시침도 동역학에 맞춰 연동하여 돌아간다.
+      // 시침 각도 = (currentHour % 12)*30 + (draggedMinute)*0.5
+      // draggedMinute는 angle/6 으로 추정 가능.
+      const dragMinute = (angle / 6) % 60;
+      const hAngle = (data.currentHour % 12) * 30 + dragMinute * 0.5;
+      const hHand = document.getElementById(`hand-hour-${p}`);
+      const hHandle = document.getElementById(`handle-hour-${p}`);
+      if (hHand) hHand.setAttribute('transform', `rotate(${hAngle} 150 150)`);
+      if (hHandle) {
+        const rad = (hAngle - 90) * Math.PI / 180;
+        hHandle.setAttribute('cx', 150 + 70 * Math.cos(rad));
+        hHandle.setAttribute('cy', 150 + 70 * Math.sin(rad));
+      }
+    }
+  }
+
+  // 정답 및 승리 상태 체크
+  function checkAnswer(p) {
+    const data = gamesData[p];
+    if (data.completed) return;
+
+    // 정답 여부 체크
+    if (data.currentHour === data.targetHour && data.currentMinute === data.targetMinute) {
+      data.completed = true;
+      data.score++;
+
+      // 사운드 재생
+      playSuccessSound();
+
+      // 점수판 갱신
+      document.getElementById(`score-${p}`).innerText = `맞춘 수: ${data.score} / ${TOTAL_STAGES}`;
+
+      // 칭찬 오버레이 활성화
+      const gameDiv = document.getElementById(`game-${p}`);
+      const successOverlay = document.getElementById(`success-${p}`);
+      gameDiv.classList.add('success-pulse');
+      successOverlay.classList.add('show');
+
+      setTimeout(() => {
+        gameDiv.classList.remove('success-pulse');
+
+        if (data.score >= TOTAL_STAGES) {
+          // 개별 완료 상태 오버레이 유지 및 다시하기 활성화
+          successOverlay.classList.add('completed-state');
+          successOverlay.innerHTML = `
+            <div class="stamp" style="font-size:clamp(2.5rem, 5vw, 3.8rem);">🏆</div>
+            <div class="message" style="font-size:clamp(1rem, 1.8vw, 1.4rem); margin-top:5px;">모두 완성!</div>
+            <button class="inner-restart-btn" onclick="resetSingleGame(${p})">다시 하기</button>
+          `;
+        } else {
+          // 정답 오버레이 숨김
+          successOverlay.classList.remove('show');
+
+          // 다음 문제 출제
+          const nextMission = generateMission();
+          data.targetHour = nextMission.hour;
+          data.targetMinute = nextMission.min;
+          data.completed = false;
+
+          // 사용자가 돌렸던 바늘 위치에서 다른 위치로 미션이 강제되었으므로 가이드 텍스트 업데이트
+          document.getElementById(`mission-title-${p}`).innerText = `${data.targetHour}시 ${data.targetMinute === 30 ? '30분' : ''}을 만들어 봐요!`;
+          document.getElementById(`guide-text-${p}`).innerHTML = getGuideText(data.targetHour, data.targetMinute);
+
+          // 1학년의 쉬운 조작을 위해 바늘 위치를 조금 떨어뜨려 주기
+          data.currentHour = (data.targetHour + 4) % 12 || 12;
+          data.currentMinute = data.targetMinute === 0 ? 30 : 0;
+
+          updateClockVisuals(p);
+        }
+      }, 1500);
+    }
+  }
+
+  // 개별 리셋 함수
+  window.resetSingleGame = (p) => {
+    const data = gamesData[p];
+    data.score = 0;
+    data.completed = false;
+
+    // 오버레이 상태와 내부 HTML 원복
+    const successOverlay = document.getElementById(`success-${p}`);
+    successOverlay.classList.remove('show', 'completed-state');
+    successOverlay.innerHTML = `
+      <div class="stamp">💯</div>
+      <div class="message">참 잘했어요!</div>
+    `;
+
+    // 새 미션 및 바늘 리셋
+    const nextMission = generateMission();
+    data.targetHour = nextMission.hour;
+    data.targetMinute = nextMission.min;
+
+    document.getElementById(`score-${p}`).innerText = `맞춘 수: 0 / ${TOTAL_STAGES}`;
+    document.getElementById(`mission-title-${p}`).innerText = `${data.targetHour}시 ${data.targetMinute === 30 ? '30분' : ''}을 만들어 봐요!`;
+    document.getElementById(`guide-text-${p}`).innerHTML = getGuideText(data.targetHour, data.targetMinute);
+
+    data.currentHour = (data.targetHour + 4) % 12 || 12;
+    data.currentMinute = data.targetMinute === 0 ? 30 : 0;
+
+    updateClockVisuals(p);
+    playClickSound();
+  };
+
+  function showFinishOverlay() {
+    const overlay = document.getElementById('finish-overlay');
+    overlay.classList.remove('hidden');
+
+    // 만점 축하 피드백
+    document.getElementById('finish-title').innerText = "🎉 축하합니다! 🎉";
+    document.getElementById('finish-desc').innerText = `${PLAYERS}명 모두 시계 보기를 마스터했어요!`;
+  }
+
+  window.resetAllGames = () => {
+    document.getElementById('finish-overlay').classList.add('hidden');
+    initGames();
+  };
+
+  // 터치/마우스 이벤트 연결
+  function bindEvents(p) {
+    const svg = document.getElementById(`svg-${p}`);
+    const data = gamesData[p];
+
+    // 하단 버튼 이벤트 바인딩 (클릭 시 가볍고 즉각 반응)
+    const btnHMinus = document.getElementById(`btn-h-minus-${p}`);
+    const btnHPlus = document.getElementById(`btn-h-plus-${p}`);
+    const btnMMinus = document.getElementById(`btn-m-minus-${p}`);
+    const btnMPlus = document.getElementById(`btn-m-plus-${p}`);
+
+    const clickHandler = (e, action) => {
+      if (data.completed) return;
+      if (e.button === 2) return; // Ignore right clicks
+      e.preventDefault();
+      playClickSound();
+
+      if (action === 'h-') {
+        data.currentHour = data.currentHour - 1;
+        if (data.currentHour === 0) data.currentHour = 12;
+      } else if (action === 'h+') {
+        data.currentHour = (data.currentHour % 12) + 1;
+      } else if (action === 'm-' || action === 'm+') {
+        // Toggle between 0 and 30 minutes for 1st grade
+        data.currentMinute = data.currentMinute === 0 ? 30 : 0;
+      }
+
+      updateClockVisuals(p);
+      checkAnswer(p);
+    };
+
+    btnHMinus.addEventListener('pointerdown', (e) => clickHandler(e, 'h-'));
+    btnHPlus.addEventListener('pointerdown', (e) => clickHandler(e, 'h+'));
+    btnMMinus.addEventListener('pointerdown', (e) => clickHandler(e, 'm-'));
+    btnMPlus.addEventListener('pointerdown', (e) => clickHandler(e, 'm+'));
+
+    // 드래그 조작 제어
+    let activeDrag = null; // 'hour' or 'minute' or null
+
+    const handleDragStart = (clientX, clientY, targetId) => {
+      if (data.completed) return;
+
+      // 터치한 타겟이 시침 핸들인지 분침 핸들인지 구분
+      if (targetId.includes('handle-hour') || targetId.includes('hand-hour')) {
+        activeDrag = 'hour';
+      } else if (targetId.includes('handle-min') || targetId.includes('hand-min')) {
+        activeDrag = 'minute';
+      } else {
+        // 핸들을 정교하게 터치하지 못했더라도 터치 시작점이 어느 핸들에 더 가깝고 외곽인지 판정
+        const rect = svg.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const radius = rect.width / 2;
+        const relativeDist = dist / radius; // 0 ~ 1.0 대역
+
+        // 시계 중심에서 너무 가까운 곳(30% 이하)은 드래그 판정 안 함
+        if (relativeDist > 0.25 && relativeDist < 1.25) {
+          let touchAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+          touchAngle = (touchAngle + 90 + 360) % 360;
+
+          const currentHAngle = (data.currentHour % 12) * 30 + data.currentMinute * 0.5;
+          const currentMAngle = data.currentMinute * 6;
+
+          const diffH = Math.min(Math.abs(touchAngle - currentHAngle), 360 - Math.abs(touchAngle - currentHAngle));
+          const diffM = Math.min(Math.abs(touchAngle - currentMAngle), 360 - Math.abs(touchAngle - currentMAngle));
+
+          // 거리와 각도 차이를 복합 고려하여 가까운 쪽 매칭
+          if (relativeDist < 0.65) {
+            activeDrag = 'hour';
+          } else {
+            activeDrag = 'minute';
+          }
+        }
+      }
+
+      if (activeDrag) {
+        data.isDragging = activeDrag;
+        playClickSound();
+      }
+    };
+
+    const handleDragMove = (clientX, clientY) => {
+      if (!data.isDragging || data.completed) return;
+
+      const rect = svg.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+
+      let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      angle = (angle + 90 + 360) % 360;
+
+      setDragHandVisuals(p, data.isDragging, angle);
+    };
+
+    const handleDragEnd = (clientX, clientY) => {
+      if (!data.isDragging || data.completed) return;
+
+      const rect = svg.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+
+      let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      angle = (angle + 90 + 360) % 360;
+
+      if (data.isDragging === 'minute') {
+        // 분침 스냅: 0분(0도) 또는 30분(180도)
+        if (angle >= 270 || angle < 90) {
+          data.currentMinute = 0;
+        } else {
+          data.currentMinute = 30;
+        }
+      } else if (data.isDragging === 'hour') {
+        // 시침 스냅: 가장 가까운 정시(H) 찾기
+        let approxH = Math.round(angle / 30);
+        if (approxH === 0) approxH = 12;
+        data.currentHour = approxH;
+      }
+
+      data.isDragging = null;
+      activeDrag = null;
+
+      updateClockVisuals(p);
+      checkAnswer(p);
+    };
+
+    // Pointer Events API로 터치 및 마우스 드래그 일체형 제어 (멀티터치/우클릭 혼선 해결)
+    svg.addEventListener('pointerdown', (e) => {
+      if (e.button === 2) return; // Ignore right clicks
+      if (data.activePointerId !== null) return; // Prevent pointer overlap (only one pointer per player game)
+
+      e.preventDefault();
+      data.activePointerId = e.pointerId;
+      svg.setPointerCapture(e.pointerId);
+      handleDragStart(e.clientX, e.clientY, e.target.id || '');
+    });
+
+    svg.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== data.activePointerId) return; // Ignore pointers that didn't initiate the touch
+      if (data.isDragging) {
+        e.preventDefault();
+        handleDragMove(e.clientX, e.clientY);
+      }
+    });
+
+    const endEvent = (e) => {
+      if (e.pointerId !== data.activePointerId) return;
+      if (data.isDragging) {
+        e.preventDefault();
+        handleDragEnd(e.clientX, e.clientY);
+        try { svg.releasePointerCapture(e.pointerId); } catch(err) {}
+      }
+      data.activePointerId = null;
+    };
+    svg.addEventListener('pointerup', endEvent);
+    svg.addEventListener('pointercancel', endEvent);
+  }
+
+})();
+</script>
+</body>
+</html>

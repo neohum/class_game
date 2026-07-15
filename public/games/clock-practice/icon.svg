@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="18" fill="#fbbf24"/>
+  <circle cx="50" cy="50" r="38" fill="#ffffff" stroke="#10b981" stroke-width="4"/>
+
+  <!-- Numbers 12, 3, 6, 9 -->
+  <text x="50" y="27" font-family="Segoe UI, sans-serif" font-size="10" font-weight="900" fill="#1f2937" text-anchor="middle">12</text>
+  <text x="75" y="54" font-family="Segoe UI, sans-serif" font-size="10" font-weight="900" fill="#1f2937" text-anchor="middle">3</text>
+  <text x="50" y="81" font-family="Segoe UI, sans-serif" font-size="10" font-weight="900" fill="#1f2937" text-anchor="middle">6</text>
+  <text x="25" y="54" font-family="Segoe UI, sans-serif" font-size="10" font-weight="900" fill="#1f2937" text-anchor="middle">9</text>
+
+  <!-- Hour and Minute Hands -->
+  <line x1="50" y1="50" x2="50" y2="35" stroke="#ef4444" stroke-width="4" stroke-linecap="round" transform="rotate(60 50 50)"/>
+  <line x1="50" y1="50" x2="50" y2="23" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" transform="rotate(180 50 50)"/>
+  <circle cx="50" cy="50" r="4" fill="#1f2937"/>
+
+  <!-- Rotating arrow guide representing clock adjustment -->
+  <path d="M 68 25 A 25 25 0 0 1 82 50" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="3 2" stroke-linecap="round"/>
+  <polygon points="82,50 78,45 86,45" fill="#ef4444"/>
+</svg>

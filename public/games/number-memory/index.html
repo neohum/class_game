@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>숫자 기억 게임</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --text-dark: #0f172a;
+    --text-light: #e2e8f0;
+    --accent: #10b981; /* 성공 초록 */
+    --accent-hover: #059669;
+    --primary: #8b5cf6; /* 보라 테마 */
+    --wrong: #ef4444;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', 'Nanum Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    overflow: hidden;
+  }
+  #games {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  .game {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end; /* 하단 버튼 밀착 */
+    padding: 12px 8px 16px 8px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* 패널 상단: HUD */
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: auto; /* 상단 고정 */
+    background: rgba(15, 23, 42, 0.4);
+    padding: 6px 10px;
+    border-radius: 10px;
+  }
+  .hud .player-name {
+    font-weight: 800;
+    font-size: clamp(0.75rem, 1.3vw, 1.05rem);
+    color: #a7f3d0;
+  }
+  .hud .stats-box {
+    font-weight: 800;
+    font-size: clamp(0.75rem, 1.3vw, 1.05rem);
+    color: #38bdf8;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 미션 및 가이드 영역 */
+  .status-container {
+    width: 100%;
+    text-align: center;
+    margin-top: 8px;
+    margin-bottom: auto; /* 그리드를 바닥으로 밀착 */
+    min-height: 52px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .status-title {
+    font-size: clamp(0.95rem, 1.6vw, 1.5rem);
+    font-weight: 900;
+    color: #fbbf24;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .status-desc {
+    font-size: clamp(0.68rem, 1.1vw, 0.85rem);
+    color: #a7f3d0; /* 연초록 힌트 */
+    font-weight: 600;
+  }
+
+  /* 3x3 카드 그리드 영역 */
+  .grid-container {
+    width: 100%;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: clamp(6px, 1.5vh, 14px);
+    width: 100%;
+    aspect-ratio: 1; /* 가로세로 비율 동일 */
+  }
+
+  /* 3D 플립 카드 스타일 */
+  .card {
+    perspective: 300px;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.15);
+    transform-style: preserve-3d;
+  }
+
+  /* flipped 상태일 때 뒤집히기 */
+  .card.flipped .card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .card-cover, .card-value {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  }
+
+  /* 카드 뒷면 (물음표 덮개) */
+  .card-cover {
+    background: linear-gradient(135deg, #4f46e5, #312e81);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: clamp(1.4rem, 2.8vw, 2.5rem);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+  }
+  .card:hover .card-cover {
+    background: linear-gradient(135deg, #6366f1, #3730a3);
+  }
+
+  /* 카드 앞면 (숫자 공개) */
+  .card-value {
+    background: #ffffff;
+    color: #0f172a;
+    transform: rotateY(180deg);
+    font-size: clamp(1.2rem, 2.4vw, 2.2rem);
+    border: 2.5px solid #cbd5e1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 카드 순서 맞춤 성공 시 */
+  .card.matched .card-value {
+    background: #a7f3d0; /* 연초록 */
+    border-color: #10b981;
+    color: #064e3b;
+    opacity: 0.8;
+    animation: match-success 0.4s ease-out;
+  }
+
+  /* 짝 안 맞아 에러 표시 시 */
+  .card.wrong-flash .card-value {
+    background: #fee2e2; /* 연빨강 */
+    border-color: #ef4444;
+    color: #7f1d1d;
+  }
+
+  @keyframes match-success {
+    0% { transform: scale(1) rotateY(180deg); }
+    50% { transform: scale(1.15) rotateY(180deg); }
+    100% { transform: scale(1) rotateY(180deg); }
+  }
+
+  /* 힌트 보드 (정렬된 순서 표시) */
+  .hint-board {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    margin-bottom: 8px;
+    background: rgba(15, 23, 42, 0.2);
+    padding: 4px;
+    border-radius: 8px;
+    flex-wrap: wrap;
+  }
+  .hint-item {
+    font-size: clamp(0.6rem, 1vw, 0.82rem);
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    font-weight: 700;
+    color: #94a3b8;
+    font-variant-numeric: tabular-nums;
+  }
+  .hint-item.next {
+    background: #fbbf24;
+    color: #0f172a;
+    transform: scale(1.08);
+  }
+  .hint-item.done {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    text-decoration: line-through;
+  }
+
+  /* 카운트다운 오버레이 (카드 그리드 위) */
+  .countdown-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    border-radius: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    backdrop-filter: blur(1px);
+  }
+  .countdown-overlay.show {
+    opacity: 1;
+  }
+  .countdown-overlay .number {
+    font-size: clamp(3.5rem, 7vw, 5.5rem);
+    font-weight: 900;
+    color: #fbbf24;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    animation: zoom-in-out 1s linear infinite;
+  }
+
+  @keyframes zoom-in-out {
+    0% { transform: scale(0.6); opacity: 0; }
+    20% { opacity: 1; }
+    80% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(1.3); opacity: 0; }
+  }
+
+  /* 패널 최하단: 컨트롤 버튼 */
+  .btn-container {
+    width: 100%;
+    max-width: min(95%, 34vh);
+  }
+  .action-btn {
+    border: none;
+    border-radius: 12px;
+    color: #0f172a;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: clamp(0.95rem, 1.6vw, 1.25rem);
+    padding: clamp(10px, 1.7vh, 16px) 10px;
+    cursor: pointer;
+    touch-action: none;
+    transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+    width: 100%;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.25);
+    text-align: center;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    border-bottom: 4px solid #92400e;
+  }
+  .action-btn:active {
+    transform: scale(0.95);
+    border-bottom-width: 1px;
+    margin-top: 3px;
+  }
+  .action-btn.playing {
+    background: linear-gradient(135deg, #94a3b8, #475569);
+    border-bottom: 4px solid #1e293b;
+    color: white;
+  }
+
+  /* 개별 완료 축하 피드백 오버레이 */
+  .success-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(139, 92, 246, 0.95); /* 보라색 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    backdrop-filter: blur(2px);
+  }
+  .success-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .success-overlay .stamp {
+    font-size: clamp(3rem, 6vw, 4.5rem);
+    animation: stamp-bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+  .success-overlay .message {
+    font-size: clamp(1.1rem, 2vw, 1.6rem);
+    font-weight: 900;
+    color: white;
+    margin-top: 8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .success-overlay .sub-message {
+    font-size: clamp(0.75rem, 1.2vw, 0.95rem);
+    color: #e9d5ff;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  .success-overlay .inner-restart-btn {
+    border: none;
+    border-radius: 10px;
+    background: #fbbf24;
+    color: #0f172a;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: clamp(0.8rem, 1.4vw, 1.15rem);
+    padding: 10px 22px;
+    margin-top: 18px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    transition: all 0.15s ease;
+    touch-action: none;
+  }
+  .success-overlay .inner-restart-btn:active {
+    transform: scale(0.92);
+    background: #fcd34d;
+  }
+
+  @keyframes stamp-bounce {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* 메인 게임 인원 선택 오버레이 */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 100;
+    padding: 20px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay .title {
+    font-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    font-weight: 900;
+    text-align: center;
+    color: #fbbf24;
+    text-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    word-break: keep-all;
+  }
+  .overlay .subtitle {
+    font-size: clamp(0.9rem, 1.8vw, 1.3rem);
+    color: #94a3b8;
+    text-align: center;
+    margin-top: -10px;
+    margin-bottom: 10px;
+    word-break: keep-all;
+  }
+  .overlay .btn-group {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    max-width: 600px;
+  }
+  .overlay .btn-group button {
+    flex: 1;
+    border: none;
+    border-radius: 16px;
+    background: #8b5cf6;
+    color: white;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: clamp(1rem, 2.2vw, 1.45rem);
+    padding: clamp(14px, 2.5vh, 22px) 8px;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(139,92,246,0.3);
+    transition: all 0.2s;
+  }
+  .overlay .btn-group button:hover {
+    background: #a78bfa;
+    transform: translateY(-2px);
+  }
+  .overlay .btn-group button:active {
+    transform: translateY(1px);
+  }
+
+  /* 플레이어 수별 폰트/크기 반응형 보정 */
+  .players-6 .status-title { font-size: clamp(0.82rem, 1.3vw, 1.15rem); }
+  .players-6 .status-desc { font-size: clamp(0.6rem, 0.9vw, 0.75rem); }
+  .players-6 .action-btn { font-size: clamp(0.78rem, 1.2vw, 0.95rem); padding: 8px 4px; border-radius: 8px; }
+  .players-6 .hud .player-name { font-size: 0.72rem; }
+  .players-6 .hud .stats-box { font-size: 0.72rem; }
+  .players-6 .game { padding: 8px 4px 10px; }
+  .players-6 .card-cover { font-size: clamp(0.95rem, 1.8vw, 1.8rem); border-radius: 8px; }
+  .players-6 .card-value { font-size: clamp(0.85rem, 1.5vw, 1.5rem); border-radius: 8px; border-width: 2px; }
+  .players-6 .hint-board { gap: 2px; padding: 2px; }
+  .players-6 .hint-item { font-size: 0.55rem; padding: 1px 3px; }
+
+  .players-2 .status-title { font-size: clamp(1.2rem, 2.2vw, 1.8rem); }
+  .players-2 .status-desc { font-size: clamp(0.8rem, 1.3vw, 1.05rem); }
+
+  .players-1 .status-title { font-size: clamp(1.4rem, 3.5vw, 2.3rem); }
+  .players-1 .status-desc { font-size: clamp(0.9rem, 2vw, 1.25rem); }
+  .players-1 .grid-container { max-width: min(75%, 45vh); }
+  .players-1 .btn-container { max-width: min(80%, 45vh); }
+  .players-1 .action-btn { font-size: clamp(1.1rem, 2.5vw, 1.4rem); padding: 18px 8px; }
+
+</style>
+</head>
+<body>
+
+<div id="games"></div>
+
+<!-- 인원수 선택 오버레이 -->
+<div id="setup-overlay" class="overlay">
+  <div class="title">🧠 숫자 기억 순서맞추기</div>
+  <div class="subtitle">1~50 사이의 무작위 숫자 9개를 기억하고 작은 수부터 눌러 보아요 (3x3 그리드)</div>
+  <div class="btn-group">
+    <button onclick="startGame(1)">1인용</button>
+    <button onclick="startGame(2)">2인용</button>
+    <button onclick="startGame(6)">6인용</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // Disable right click / context menu globally
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  const GRID_SIZE = 9; // 3x3 그리드
+  let PLAYERS = 6;
+  let gamesData = [];
+
+  // URL 파라미터 체크
+  const params = new URLSearchParams(location.search);
+  if (params.has('players')) {
+    PLAYERS = Math.max(1, Math.min(6, parseInt(params.get('players'), 10) || 6));
+    document.getElementById('setup-overlay').classList.add('hidden');
+    initGames();
+  }
+
+  window.startGame = (num) => {
+    PLAYERS = num;
+    document.getElementById('setup-overlay').classList.add('hidden');
+    history.pushState(null, '', `?players=${num}`);
+    initGames();
+  };
+
+  // Web Audio 컨텍스트 공유 싱글톤
+  let audioCtx = null;
+  function getAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  // 1. 카드를 뒤집을 때 가벼운 '휙' 소리
+  function playFlipSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } catch (e) { console.error(e); }
+  }
+
+  // 2. 카드를 맞췄을 때 딩동댕 소리 (도-솔 화음)
+  function playMatchSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      const notes = [523.25, 783.99]; // C5, G5
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+        gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.2);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.22);
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  // 3. 카드를 틀렸을 때 경고음 (낮게 울림)
+  function playMismatchSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.setValueAtTime(150, now + 0.08);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.22);
+    } catch (e) { console.error(e); }
+  }
+
+  // 4. 카운트다운 초당 '똑' 소리
+  function playTickSound() {
+    try {
+      const ctx = getAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1000, ctx.currentTime);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.04);
+    } catch (e) { console.error(e); }
+  }
+
+  // 5. 완료 시 성공 멜로디 (도-미-솔-도-미-솔-도 경쾌하게)
+  function playWinSound() {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+        gain.gain.setValueAtTime(0.12, now + idx * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.005, now + idx * 0.07 + 0.2);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.07);
+        osc.stop(now + idx * 0.07 + 0.22);
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  // 1에서 50 사이 무작위 중복 없는 9개 숫자 추출 및 정렬 정보 생성
+  function generateNumbersAndDeck() {
+    const list = [];
+    for (let i = 1; i <= 50; i++) list.push(i);
+
+    // 셔플
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+
+    const selected = list.slice(0, GRID_SIZE);
+
+    // 카드 덱 생성
+    const deck = selected.map((num, index) => ({
+      id: index,
+      value: num,
+      flipped: false,
+      matched: false
+    }));
+
+    // 정답 판정을 위한 크기 정렬 오름차순 리스트
+    const sortedValues = [...selected].sort((a, b) => a - b);
+
+    return { deck, sortedValues };
+  }
+
+  // 게임 초기화
+  function initGames() {
+    const container = document.getElementById('games');
+    container.innerHTML = '';
+    container.className = `players-${PLAYERS}`;
+
+    gamesData = [];
+
+    for (let p = 0; p < PLAYERS; p++) {
+      const gameDiv = document.createElement('div');
+      gameDiv.className = 'game';
+      gameDiv.id = `game-${p}`;
+
+      const pData = {
+        playerIndex: p,
+        state: 'ready', // 'ready', 'preview', 'playing', 'completed'
+        deck: [],
+        sortedValues: [], // 정렬된 정답 배열
+        nextTargetIndex: 0, // 현재 맞춰야 하는 sortedValues의 인덱스 (0 ~ 8)
+        attempts: 0, // 실패 횟수
+        lockClick: false, // 다른 카드 터치 일시 차단
+        timerId: null,
+      };
+
+      gamesData.push(pData);
+
+      // HTML 기틀 배치
+      gameDiv.innerHTML = `
+        <div class="hud">
+          <div class="player-name">${p + 1}번 자리</div>
+          <div class="stats-box" id="stats-${p}">실패: 0회 | 맞춘 숫자: 0/${GRID_SIZE}</div>
+        </div>
+
+        <div class="status-container">
+          <div class="status-title" id="status-title-${p}">준비 완료!</div>
+          <div class="status-desc" id="status-desc-${p}">아래 시작 버튼을 눌러주세요</div>
+        </div>
+
+        <!-- 정렬 힌트 보드 -->
+        <div class="hint-board" id="hints-${p}">
+          ${generateEmptyHintItems()}
+        </div>
+
+        <div class="grid-container">
+          <!-- 3x3 Card Grid -->
+          <div class="card-grid" id="grid-${p}">
+            ${generatePlaceholderGrid()}
+          </div>
+
+          <!-- Countdown Overlay for Preview Time -->
+          <div class="countdown-overlay" id="countdown-${p}">
+            <div class="number" id="countdown-num-${p}">3</div>
+          </div>
+        </div>
+
+        <div class="btn-container">
+          <button class="action-btn" id="btn-action-${p}">게임 시작</button>
+        </div>
+
+        <div class="success-overlay" id="success-${p}">
+          <div class="stamp">🏆</div>
+          <div class="message">모두 성공!</div>
+          <div class="sub-message" id="success-stats-${p}">실패 0회 만에 다 맞췄어요!</div>
+          <button class="inner-restart-btn" onclick="resetSingleGame(${p})">다시 시작</button>
+        </div>
+      `;
+
+      container.appendChild(gameDiv);
+
+      // 액션 버튼 이벤트 바인딩
+      const actionBtn = document.getElementById(`btn-action-${p}`);
+      actionBtn.addEventListener('pointerdown', (e) => {
+        if (e.button === 2) return;
+        e.preventDefault();
+        handleActionButton(p);
+      });
+    }
+  }
+
+  // 대기 시 정렬 힌트 껍데기
+  function generateEmptyHintItems() {
+    let html = '';
+    for (let i = 0; i < GRID_SIZE; i++) {
+      html += `<div class="hint-item">?</div>`;
+    }
+    return html;
+  }
+
+  // 대기 상태 빈 카드 그리드 그리기 (물음표 9개)
+  function generatePlaceholderGrid() {
+    let html = '';
+    for (let i = 0; i < GRID_SIZE; i++) {
+      html += `
+        <div class="card">
+          <div class="card-inner">
+            <div class="card-cover">?</div>
+            <div class="card-value"></div>
+          </div>
+        </div>
+      `;
+    }
+    return html;
+  }
+
+  // 게임 시작 또는 다시 시작 처리
+  function handleActionButton(p) {
+    const data = gamesData[p];
+    if (data.state === 'preview') return; // 기억 시간 중에는 액션 무시
+
+    playClickSound();
+    setupNewGame(p);
+  }
+
+  function setupNewGame(p) {
+    const data = gamesData[p];
+
+    // 타이머가 작동 중이면 강제 중단
+    if (data.timerId) {
+      clearInterval(data.timerId);
+      data.timerId = null;
+    }
+
+    // 상태 초기화
+    data.state = 'preview';
+    const setupData = generateNumbersAndDeck();
+    data.deck = setupData.deck;
+    data.sortedValues = setupData.sortedValues;
+    data.nextTargetIndex = 0;
+    data.attempts = 0;
+    data.lockClick = false;
+
+    // 성공 오버레이 숨기기
+    document.getElementById(`success-${p}`).classList.remove('show');
+
+    // HUD 및 텍스트 갱신
+    document.getElementById(`stats-${p}`).innerText = `실패: 0회 | 맞춘 숫자: 0/${GRID_SIZE}`;
+    document.getElementById(`status-title-${p}`).innerText = `숫자 기억하기!`;
+    document.getElementById(`status-desc-${p}`).innerText = `3초 동안 나오는 숫자의 위치를 기억해요`;
+
+    const actionBtn = document.getElementById(`btn-action-${p}`);
+    actionBtn.innerText = `기억하는 중...`;
+    actionBtn.classList.add('playing');
+
+    // 힌트 리스트 렌더링
+    renderHintBoard(p);
+
+    // 카드 그리드 드로잉 (전부 뒤집어진 상태, 즉 value를 가진 앞면 rotate 상태로 렌더링)
+    renderGrid(p, true);
+
+    // 카운트다운 시작
+    startPreviewCountdown(p);
+  }
+
+  // 힌트 보드 렌더링
+  function renderHintBoard(p) {
+    const board = document.getElementById(`hints-${p}`);
+    board.innerHTML = '';
+    const data = gamesData[p];
+
+    data.sortedValues.forEach((val, idx) => {
+      const item = document.createElement('div');
+      item.className = 'hint-item';
+
+      if (idx < data.nextTargetIndex) {
+        item.className = 'hint-item done';
+        item.innerText = val;
+      } else if (idx === data.nextTargetIndex) {
+        item.className = 'hint-item next';
+        item.innerText = val;
+      } else {
+        item.innerText = val;
+      }
+
+      board.appendChild(item);
+    });
+  }
+
+  // 카드 그리드 동적 렌더링
+  function renderGrid(p, allFlipped = false) {
+    const grid = document.getElementById(`grid-${p}`);
+    grid.innerHTML = '';
+    const data = gamesData[p];
+
+    data.deck.forEach((card, idx) => {
+      const cardDiv = document.createElement('div');
+      cardDiv.className = `card ${card.flipped || allFlipped ? 'flipped' : ''} ${card.matched ? 'matched' : ''}`;
+      cardDiv.id = `card-${p}-${idx}`;
+      cardDiv.dataset.index = idx;
+
+      cardDiv.innerHTML = `
+        <div class="card-inner">
+          <div class="card-cover">?</div>
+          <div class="card-value">${card.value}</div>
+        </div>
+      `;
+
+      // 카드 클릭(pointerdown) 이벤트 바인딩 - 멀티터치 혼선 및 우클릭(2) 필터링
+      cardDiv.addEventListener('pointerdown', (e) => {
+        if (e.button === 2) return;
+        e.preventDefault();
+        handleCardClick(p, idx);
+      });
+
+      grid.appendChild(cardDiv);
+    });
+  }
+
+  // 프리뷰 기억 카운트다운 (3초)
+  function startPreviewCountdown(p) {
+    const data = gamesData[p];
+    const countdownOverlay = document.getElementById(`countdown-${p}`);
+    const countdownNum = document.getElementById(`countdown-num-${p}`);
+
+    countdownOverlay.classList.add('show');
+    let timeLeft = 3;
+    countdownNum.innerText = timeLeft;
+    playTickSound();
+
+    data.timerId = setInterval(() => {
+      timeLeft--;
+      if (timeLeft > 0) {
+        countdownNum.innerText = timeLeft;
+        playTickSound();
+      } else {
+        clearInterval(data.timerId);
+        data.timerId = null;
+        countdownOverlay.classList.remove('show');
+
+        // 기억 시간 끝! 카드 모두 뒷면으로 돌려 덮기
+        data.state = 'playing';
+        document.getElementById(`status-title-${p}`).innerText = `가장 작은 수부터 눌러요!`;
+        document.getElementById(`status-desc-${p}`).innerText = `숨겨진 카드 중 가장 작은 수를 먼저 찾아 누르세요`;
+
+        const actionBtn = document.getElementById(`btn-action-${p}`);
+        actionBtn.innerText = `다시 시작`;
+        actionBtn.classList.remove('playing');
+
+        // 카드 렌더링을 갱신해서 뒷면으로 돌림
+        renderGrid(p, false);
+        playTickSound();
+      }
+    }, 1000);
+  }
+
+  // 카드 클릭 핸들러
+  function handleCardClick(p, cardIdx) {
+    const data = gamesData[p];
+    if (data.state !== 'playing' || data.lockClick) return;
+
+    const card = data.deck[cardIdx];
+    // 이미 맞춘 카드면 무시
+    if (card.matched) return;
+
+    // 현재 맞춰야 하는 목표 값
+    const targetValue = data.sortedValues[data.nextTargetIndex];
+
+    // 탭 락 실행
+    data.lockClick = true;
+
+    if (card.value === targetValue) {
+      // 정답!
+      playFlipSound();
+      card.flipped = true;
+      card.matched = true;
+
+      const cardDiv = document.getElementById(`card-${p}-${cardIdx}`);
+      cardDiv.classList.add('flipped', 'matched');
+
+      playMatchSound();
+
+      data.nextTargetIndex++;
+      document.getElementById(`stats-${p}`).innerText = `실패: ${data.attempts}회 | 맞춘 숫자: ${data.nextTargetIndex}/${GRID_SIZE}`;
+
+      renderHintBoard(p);
+
+      data.lockClick = false;
+
+      // 모든 숫자를 맞췄을 때 승리 처리
+      if (data.nextTargetIndex === GRID_SIZE) {
+        handleGameWin(p);
+      }
+    } else {
+      // 오답!
+      playFlipSound();
+      card.flipped = true;
+
+      const cardDiv = document.getElementById(`card-${p}-${cardIdx}`);
+      cardDiv.classList.add('flipped', 'wrong-flash');
+
+      playMismatchSound();
+      data.attempts++;
+      document.getElementById(`stats-${p}`).innerText = `실패: ${data.attempts}회 | 맞춘 숫자: ${data.nextTargetIndex}/${GRID_SIZE}`;
+
+      // 잠시 오답인 채로 보여준 뒤 다시 뒤집어 가림
+      setTimeout(() => {
+        card.flipped = false;
+        cardDiv.classList.remove('flipped', 'wrong-flash');
+        data.lockClick = false;
+      }, 700);
+    }
+  }
+
+  // 한 플레이어 완료 시 개별 처리
+  function handleGameWin(p) {
+    const data = gamesData[p];
+    data.state = 'completed';
+
+    playWinSound();
+
+    document.getElementById(`status-title-${p}`).innerText = `미션 클리어!`;
+    document.getElementById(`status-desc-${p}`).innerText = `크기 순서대로 숫자를 모두 찾았습니다!`;
+
+    // 개별 우승 오버레이 표출
+    const successOverlay = document.getElementById(`success-${p}`);
+    document.getElementById(`success-stats-${p}`).innerText = `실패 ${data.attempts}회 만에 모두 맞췄어요!`;
+    successOverlay.classList.add('show');
+  }
+
+  // 개별 리셋 함수 (다시 시작)
+  window.resetSingleGame = (p) => {
+    playClickSound();
+    setupNewGame(p);
+  };
+
+  // 소리 조작용 가벼운 틱
+  function playClickSound() {
+    try {
+      const ctx = getAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(500, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.06);
+    } catch (e) {}
+  }
+
+})();
+</script>
+</body>
+</html>

@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# harness runtime state (loop locks, telemetry, checkpoints)
+.harness/
+current.md
+current_tasks/*.lock

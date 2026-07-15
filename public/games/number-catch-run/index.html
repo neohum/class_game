@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>달려라 숫자잡기</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --text-light: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #34d399;
+    --gold: #fbbf24;
+    --sky: #38bdf8;
+    --wrong: #f87171;
+    --ground-h: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;      /* 스크롤/줌 제스처 판정 지연 제거 → 터치 즉시 반응 */
+    overflow: hidden;
+  }
+  img, svg { -webkit-user-drag: none; }
+  #games {
+    display: flex;
+    height: 100vh;
+    gap: 8px;
+    padding: 8px;
+  }
+  .game {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 8px 8px;
+    overflow: hidden;
+  }
+  .game h2 {
+    font-size: 1rem;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .game h2 span { color: var(--sky); }
+  .hud {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    margin-bottom: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+  .hud .box {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    padding: 4px 10px;
+    text-align: center;
+    min-width: 0;
+    flex: 1 1 0;
+    max-width: 110px;
+  }
+  .hud .label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .hud .value {
+    font-size: clamp(0.9rem, 1.6vw, 1.3rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .hud .value.progress { color: var(--accent); }
+  /* 문제는 컬럼 상단에 표시(보기 전용) — 조작 요소는 전부 하단 트랙에 있다 */
+  .question {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 10px;
+    padding: 8px 6px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .qtag {
+    font-size: clamp(0.65rem, 1vw, 0.8rem);
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .qtext {
+    font-size: clamp(1.05rem, 2vw, 1.6rem);
+    font-weight: 800;
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* 1학년 원칙: 달리기 트랙(모든 조작 요소)은 컬럼 최하단에 붙인다 */
+  .track {
+    position: relative;
+    flex: 1 1 0;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .ground {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: var(--ground-h);
+    border-radius: 7px;
+    background: repeating-linear-gradient(90deg,
+      #334155 0 24px, #475569 24px 48px);
+    background-size: 48px 100%;
+    animation: groundmove 0.9s linear infinite paused;
+  }
+  .track.running .ground { animation-play-state: running; }
+  @keyframes groundmove {
+    from { background-position-x: 0; }
+    to   { background-position-x: -48px; }
+  }
+  /* 달리는 캐릭터 */
+  .runner {
+    position: absolute;
+    left: 10%;
+    bottom: var(--ground-h);
+    width: 52px;
+    height: 70px;
+    pointer-events: none;
+  }
+  .runner .body {
+    position: absolute;
+    top: 0; left: 3px;
+    width: 46px;
+    height: 46px;
+    border-radius: 46% 46% 42% 42%;
+    background: linear-gradient(160deg, hsl(199 89% 70%), hsl(217 91% 55%));
+    box-shadow: 0 4px 10px rgba(56, 189, 248, 0.35);
+  }
+  .runner .eye {
+    position: absolute;
+    top: 15px;
+    width: 9px; height: 11px;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .runner .eye::after {
+    content: '';
+    position: absolute;
+    right: 1px; top: 3px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #0f172a;
+  }
+  .runner .eye.l { left: 12px; }
+  .runner .eye.r { left: 26px; }
+  .runner .mouth {
+    position: absolute;
+    left: 17px; top: 30px;
+    width: 13px; height: 7px;
+    border-radius: 0 0 12px 12px;
+    background: #0f172a;
+  }
+  .runner .leg {
+    position: absolute;
+    top: 44px;
+    width: 9px; height: 22px;
+    border-radius: 5px;
+    background: hsl(217 91% 45%);
+    transform-origin: top center;
+  }
+  .runner .leg.l { left: 14px; }
+  .runner .leg.r { left: 29px; }
+  .track.running .leg.l { animation: stride 0.3s ease-in-out infinite; }
+  .track.running .leg.r { animation: stride 0.3s ease-in-out infinite reverse; }
+  @keyframes stride {
+    0%, 100% { transform: rotate(28deg); }
+    50%      { transform: rotate(-28deg); }
+  }
+  .runner.jump { animation: jump 0.45s cubic-bezier(0.3, 0, 0.4, 1); }
+  @keyframes jump {
+    0%   { transform: translateY(0) scale(1, 1); }
+    15%  { transform: translateY(4px) scale(1.1, 0.85); }
+    55%  { transform: translateY(-52px) scale(0.95, 1.08); }
+    100% { transform: translateY(0) scale(1, 1); }
+  }
+  /* 흘러가는 숫자 거품 — 터치 대상 최소 48px 보장(JS에서 --bs ≥ 48px) */
+  .bubble {
+    position: absolute;
+    left: 0;
+    bottom: calc(var(--ground-h) + 82px);
+    width: var(--bs, 64px);
+    height: var(--bs, 64px);
+    border: none;
+    border-radius: 50%;
+    font-family: inherit;
+    font-size: calc(var(--bs, 64px) * 0.42);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #0f172a;
+    cursor: pointer;
+    touch-action: none;
+    box-shadow: inset -4px -6px 12px rgba(15, 23, 42, 0.18),
+                0 4px 12px rgba(15, 23, 42, 0.45);
+    will-change: transform;
+  }
+  .bubble.c0 { background: radial-gradient(circle at 32% 28%, hsl(199 95% 84%), hsl(199 89% 58%)); }
+  .bubble.c1 { background: radial-gradient(circle at 32% 28%, hsl(45 97% 82%), hsl(43 96% 56%)); }
+  .bubble.c2 { background: radial-gradient(circle at 32% 28%, hsl(340 90% 86%), hsl(340 82% 66%)); }
+  .bubble.wrong { animation: shake 0.3s; box-shadow: 0 0 0 4px var(--wrong), 0 4px 12px rgba(15, 23, 42, 0.45); }
+  @keyframes shake {
+    0%, 100% { margin-left: 0; }
+    25% { margin-left: -6px; }
+    75% { margin-left: 6px; }
+  }
+  /* 잡은 순간의 팝 연출(일회용 요소) */
+  .pop {
+    position: absolute;
+    width: var(--bs, 64px);
+    height: var(--bs, 64px);
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, hsl(152 76% 80%), hsl(152 69% 52%));
+    color: #0f172a;
+    font-size: calc(var(--bs, 64px) * 0.42);
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    animation: popfly 0.55s ease-out forwards;
+  }
+  @keyframes popfly {
+    0%   { transform: translateY(0) scale(1); opacity: 1; }
+    30%  { transform: translateY(-14px) scale(1.35); opacity: 1; }
+    100% { transform: translateY(-52px) scale(0.6); opacity: 0; }
+  }
+  .speedflash {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--ground-h) + 160px);
+    transform: translateX(-50%);
+    font-size: clamp(0.8rem, 1.4vw, 1.1rem);
+    font-weight: 800;
+    color: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .speedflash.show { animation: flashup 0.8s ease-out; }
+  @keyframes flashup {
+    0%   { opacity: 0; transform: translate(-50%, 10px); }
+    25%  { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -18px); }
+  }
+  /* 시작/종료 오버레이 — 1학년 원칙에 따라 버튼을 바닥 쪽에 배치 */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 10px 10px 7vh;
+    backdrop-filter: blur(3px);
+    border-radius: 14px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .hidden { display: none; }
+  .overlay .title { font-size: clamp(1.2rem, 2.5vw, 2rem); font-weight: 800; text-align: center; }
+  .overlay .result {
+    font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+  }
+  .overlay .sub { color: var(--muted); font-size: clamp(0.8rem, 1.3vw, 1rem); text-align: center; line-height: 1.5; }
+  .overlay .big {
+    background: var(--accent);
+    color: #0f172a;
+    border: none;
+    border-radius: 12px;
+    min-height: 56px;
+    padding: 12px 32px;
+    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .overlay .tap { color: #64748b; font-size: 0.75rem; }
+  /* players=1: 패널 폭 ≈ 뷰포트 폭(좁은 iframe)이므로 vw 기반 크기를 약 4배로 보정 */
+  .players-1 .hud .value { font-size: clamp(0.9rem, 6.4vw, 1.3rem); }
+  .players-1 .qtag { font-size: clamp(0.65rem, 4vw, 0.8rem); }
+  .players-1 .qtext { font-size: clamp(1.05rem, 8vw, 1.6rem); }
+  .players-1 .speedflash { font-size: clamp(0.8rem, 5.6vw, 1.1rem); }
+  .players-1 .overlay .title { font-size: clamp(1.2rem, 10vw, 2rem); }
+  .players-1 .overlay .result { font-size: clamp(1.6rem, 14vw, 2.8rem); }
+  .players-1 .overlay .sub { font-size: clamp(0.8rem, 5.2vw, 1rem); }
+  .players-1 .overlay .big { font-size: clamp(1rem, 7.2vw, 1.2rem); }
+</style>
+</head>
+<body>
+
+<div id="games"></div>
+
+<script>
+(() => {
+  const TOTAL = 5; /* 잡을 문제 수 */
+  const SPEED_UP = 1.28; /* 문제 하나 잡을 때마다 곱해지는 속도 배율 */
+
+  /* ?players=N (1~6): 랜덤 게임 허브가 1인용 좁은 iframe으로 로드할 때 사용 */
+  const PLAYERS = Math.max(1, Math.min(6, parseInt(new URLSearchParams(location.search).get('players'), 10) || 4));
+
+  /* ?players= 없이 열면 인원수 선택(1·2·4·6인)부터 — 고르면 그 인원으로 다시 연다 */
+  if (!new URLSearchParams(location.search).has('players')) {
+    const sel = document.createElement('div');
+    sel.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:14px;padding:0 16px 6vh;background:rgba(15,23,42,0.97);color:#e2e8f0;';
+    sel.innerHTML = '<div style="font-size:clamp(1.3rem,3vw,2.2rem);font-weight:800;">몇 명이서 할까요?</div>'
+      + '<div style="display:flex;gap:12px;width:100%;max-width:720px;">'
+      + [1, 2, 4, 6].map(n => '<button data-p="' + n + '" style="flex:1;border:none;border-radius:14px;background:#38bdf8;color:#0f172a;font-family:inherit;font-weight:800;font-size:clamp(1rem,2.4vw,1.6rem);padding:clamp(14px,3vh,26px) 4px;cursor:pointer;touch-action:none;">' + n + '인용</button>').join('')
+      + '</div>';
+    document.body.appendChild(sel);
+    sel.addEventListener('pointerdown', e => {
+      const btn = e.target.closest('[data-p]');
+      if (btn) location.search = 'players=' + btn.dataset.p;
+    });
+  }
+  document.body.classList.add('players-' + PLAYERS);
+
+  /* 우클릭 및 롱프레스 컨텍스트 메뉴 차단 */
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  /* 드래그/텍스트 선택으로 인한 입력 방해 차단 */
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  const rnd = n => Math.floor(Math.random() * n);
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = rnd(i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  /* 정답 주변 값으로 오답 2개 생성 (0~20, 서로 다름) */
+  function distractors(answer) {
+    const pool = shuffle([-3, -2, -1, 1, 2, 3].map(d => answer + d))
+      .filter(v => v >= 0 && v <= 20);
+    return pool.slice(0, 2);
+  }
+
+  /* 1학년 수준 4종 문제 — 한 판(5문제)에 전 유형이 최소 한 번씩 나온다 */
+  const QUESTION_TYPES = {
+    add() { /* 10 이하 덧셈 */
+      const a = 1 + rnd(9);
+      const b = 1 + rnd(10 - a);
+      return { tag: '덧셈', text: a + ' + ' + b + ' = ?', answer: a + b };
+    },
+    sub() { /* 10 이하 뺄셈, 결과 0 이상 */
+      const a = 2 + rnd(9);
+      const b = 1 + rnd(a);
+      return { tag: '뺄셈', text: a + ' - ' + b + ' = ?', answer: a - b };
+    },
+    compare() { /* 수 크기 비교 (20 이하) */
+      const nums = [];
+      while (nums.length < 3) {
+        const n = 1 + rnd(20);
+        if (!nums.includes(n)) nums.push(n);
+      }
+      return { tag: '가장 큰 수', text: '가장 큰 수를 잡아요!', answer: Math.max(...nums), values: nums };
+    },
+    next() { /* 이어 세기: 다음 수 */
+      const n = 1 + rnd(19);
+      return { tag: '이어 세기', text: n + ' 다음 수는?', answer: n + 1 };
+    },
+    skip() { /* 이어 세기: 2씩 뛰어 세기 */
+      const n = 2 * (1 + rnd(8));
+      return { tag: '2씩 뛰어 세기', text: n + ' 다음 수는?', answer: n + 2 };
+    },
+  };
+  const TYPE_BAG = ['add', 'sub', 'compare', 'next', 'skip'];
+
+  function genQuestion(type) {
+    const q = QUESTION_TYPES[type]();
+    if (!q.values) q.values = [q.answer, ...distractors(q.answer)];
+    q.values = shuffle(q.values.slice());
+    return q;
+  }
+
+  function createGame(root, index) {
+    root.className = 'game';
+    const heading = PLAYERS === 1 ? '달려라 <span>숫자잡기</span>' : 'PLAYER ' + (index + 1) + ' · 달려라 <span>숫자잡기</span>';
+    root.innerHTML = `
+      <h2>${heading}</h2>
+      <div class="hud">
+        <div class="box"><div class="label">진행</div><div class="value progress">0/${TOTAL}</div></div>
+        <div class="box"><div class="label">틀림</div><div class="value miss">0</div></div>
+        <div class="box"><div class="label">시간</div><div class="value time">0.0</div></div>
+      </div>
+      <div class="question"><span class="qtag">준비</span><span class="qtext">정답 거품을 잡아요!</span></div>
+      <div class="track">
+        <button class="bubble c0"></button>
+        <button class="bubble c1"></button>
+        <button class="bubble c2"></button>
+        <div class="runner">
+          <div class="leg l"></div><div class="leg r"></div>
+          <div class="body"><div class="eye l"></div><div class="eye r"></div><div class="mouth"></div></div>
+        </div>
+        <div class="speedflash">더 빨라져요!</div>
+        <div class="ground"></div>
+      </div>
+      <div class="overlay">
+        <div class="title">달려라 숫자잡기</div>
+        <div class="result hidden"></div>
+        <div class="sub">문제를 읽고, 흘러가는 거품 중<br>정답 숫자를 잡아요! (${TOTAL}문제)</div>
+        <button class="big">시작!</button>
+        <div class="tap">화면 아무 곳이나 터치해도 시작</div>
+      </div>`;
+
+    const track = root.querySelector('.track');
+    const runner = root.querySelector('.runner');
+    const ground = root.querySelector('.ground');
+    const speedflash = root.querySelector('.speedflash');
+    const qtagEl = root.querySelector('.qtag');
+    const qtextEl = root.querySelector('.qtext');
+    const progressEl = root.querySelector('.value.progress');
+    const missEl = root.querySelector('.value.miss');
+    const timeEl = root.querySelector('.value.time');
+    const overlay = root.querySelector('.overlay');
+    const overlayTitle = overlay.querySelector('.title');
+    const overlayResult = overlay.querySelector('.result');
+    const overlaySub = overlay.querySelector('.sub');
+    const startBtn = overlay.querySelector('.big');
+
+    /* 원칙 7: 게임 상태는 전역이 아니라 이 컬럼만의 객체 — 인스턴스 간 완전 독립 */
+    const S = {
+      playing: false,
+      caught: 0,
+      miss: 0,
+      startTime: 0,
+      speed: 0,
+      baseSpeed: 0,
+      question: null,
+      bag: [],
+      bubbles: [...root.querySelectorAll('.bubble')].map(el => ({ el, x: 0, phase: Math.random() * 6.28, value: 0, wrongTimer: 0 })),
+      rafId: 0,
+      lastTs: 0,
+    };
+
+    let trackW = 0;
+    let bubbleSize = 64;
+    let gap = 120;
+
+    function layout() {
+      trackW = track.clientWidth || root.clientWidth;
+      /* 6분할(컬럼 약 320px)에서도 터치 대상 48px 이상 보장 */
+      bubbleSize = Math.max(48, Math.min(84, trackW * 0.2));
+      root.style.setProperty('--bs', bubbleSize.toFixed(0) + 'px');
+      /* 거품 3개가 등간격으로 순환해도 겹치지 않고, 랩어라운드가 화면 오른쪽 밖에서 시작하도록 */
+      gap = Math.max(bubbleSize * 1.9, (trackW + bubbleSize + 30) / 3);
+    }
+
+    function applyBubble(b, ts) {
+      const bob = Math.sin(ts / 480 + b.phase) * 6;
+      b.el.style.transform = 'translate3d(' + b.x.toFixed(1) + 'px,' + bob.toFixed(1) + 'px,0)';
+    }
+
+    function newQuestion() {
+      S.question = genQuestion(S.bag[S.caught % S.bag.length]);
+      qtagEl.textContent = S.question.tag;
+      qtextEl.textContent = S.question.text;
+      S.bubbles.forEach((b, i) => {
+        b.value = S.question.values[i];
+        b.el.textContent = b.value;
+        b.x = trackW + 16 + i * gap; /* 오른쪽 밖에서 등장 */
+        b.el.classList.remove('wrong');
+      });
+    }
+
+    /* 시작 전 미리보기: 거품을 화면 안에 펼쳐 보여준다 */
+    function preview() {
+      layout();
+      S.bag = shuffle(TYPE_BAG.slice());
+      newQuestion();
+      S.bubbles.forEach((b, i) => {
+        b.x = trackW * (0.08 + 0.31 * i);
+        applyBubble(b, i * 700);
+      });
+    }
+
+    function step(ts) {
+      if (!S.playing) return;
+      const dt = Math.min(S.lastTs ? ts - S.lastTs : 16, 50); /* 탭 전환 등 큰 공백 보정 */
+      S.lastTs = ts;
+      for (const b of S.bubbles) {
+        b.x -= S.speed * dt / 1000;
+        /* 화면을 벗어나면(정답 포함) 오른쪽에서 다시 나온다 */
+        if (b.x < -bubbleSize - 12) b.x += gap * 3;
+        applyBubble(b, ts);
+      }
+      timeEl.textContent = ((performance.now() - S.startTime) / 1000).toFixed(1);
+      S.rafId = requestAnimationFrame(step);
+    }
+
+    function jumpRunner() {
+      runner.classList.remove('jump');
+      void runner.offsetWidth; /* 애니메이션 재시작 트릭 */
+      runner.classList.add('jump');
+    }
+
+    function spawnPop(b) {
+      const pop = document.createElement('div');
+      pop.className = 'pop';
+      pop.textContent = b.value;
+      pop.style.left = b.x.toFixed(1) + 'px';
+      pop.style.bottom = b.el.style.bottom || 'calc(var(--ground-h) + 82px)';
+      track.appendChild(pop);
+      setTimeout(() => pop.remove(), 600);
+    }
+
+    function onBubble(b) {
+      if (!S.playing) return;
+      if (b.value !== S.question.answer) {
+        /* 오답: 흔들림 피드백만 주고 계속 진행 — 입력 잠금 없음(다른 손가락 방해 금지) */
+        S.miss++;
+        missEl.textContent = S.miss;
+        clearTimeout(b.wrongTimer);
+        b.el.classList.remove('wrong');
+        void b.el.offsetWidth;
+        b.el.classList.add('wrong');
+        b.wrongTimer = setTimeout(() => b.el.classList.remove('wrong'), 350);
+        return;
+      }
+      /* 정답: 캐릭터 점프 + 거품 잡기 연출 */
+      S.caught++;
+      progressEl.textContent = S.caught + '/' + TOTAL;
+      jumpRunner();
+      spawnPop(b);
+      if (S.caught >= TOTAL) return finish();
+      /* 도전 요소: 잡을 때마다 흐르는 속도 증가 */
+      S.speed *= SPEED_UP;
+      ground.style.animationDuration = (0.9 * S.baseSpeed / S.speed).toFixed(2) + 's';
+      speedflash.classList.remove('show');
+      void speedflash.offsetWidth;
+      speedflash.classList.add('show');
+      newQuestion();
+    }
+
+    /* pointerdown 위임: 포인터마다 독립 발생 → 멀티터치에서도 각 손가락이 즉시 처리됨 */
+    track.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return; /* 마우스는 좌클릭만 */
+      const btn = e.target.closest('.bubble');
+      if (!btn) return;
+      e.preventDefault(); /* 합성 click/더블탭 줌 등 후속 이벤트 방지 */
+      onBubble(S.bubbles.find(b => b.el === btn));
+    });
+
+    function start() {
+      layout();
+      S.caught = 0;
+      S.miss = 0;
+      S.bag = shuffle(TYPE_BAG.slice());
+      S.baseSpeed = Math.max(44, trackW * 0.16); /* 시작 속도: 거품이 트랙을 약 6초에 가로지름 */
+      S.speed = S.baseSpeed;
+      S.lastTs = 0;
+      progressEl.textContent = '0/' + TOTAL;
+      missEl.textContent = '0';
+      timeEl.textContent = '0.0';
+      ground.style.animationDuration = '0.9s';
+      newQuestion();
+      overlay.classList.add('hidden');
+      track.classList.add('running');
+      S.playing = true;
+      S.startTime = performance.now();
+      cancelAnimationFrame(S.rafId);
+      S.rafId = requestAnimationFrame(step);
+    }
+
+    function finish() {
+      S.playing = false;
+      cancelAnimationFrame(S.rafId);
+      const secs = (performance.now() - S.startTime) / 1000;
+      timeEl.textContent = secs.toFixed(1);
+      overlayTitle.textContent = '다 잡았다! 🎉';
+      overlayResult.textContent = secs.toFixed(1) + '초';
+      overlayResult.classList.remove('hidden');
+      overlaySub.innerHTML = '틀린 횟수: <b style="color:var(--wrong)">' + S.miss + '번</b>';
+      startBtn.textContent = '다시 시작';
+      /* 점프·팝 연출이 보이도록 잠깐 뒤에 결과 표시 — 이 컬럼만 멈추고 다른 컬럼은 계속 */
+      setTimeout(() => {
+        track.classList.remove('running');
+        overlay.classList.remove('hidden');
+      }, 600);
+    }
+
+    /* 오버레이 전체가 시작 버튼: 준비된 학생부터 각자 시작/재시작 */
+    overlay.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      start();
+    });
+
+    window.addEventListener('resize', () => {
+      const oldW = trackW;
+      layout();
+      if (oldW > 0) S.bubbles.forEach(b => { b.x = b.x / oldW * trackW; });
+    });
+
+    preview();
+  }
+
+  const container = document.getElementById('games');
+  for (let i = 0; i < PLAYERS; i++) {
+    const panel = document.createElement('div');
+    container.appendChild(panel);
+    createGame(panel, i);
+  }
+})();
+</script>
+</body>
+</html>

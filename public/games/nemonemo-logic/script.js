@@ -839,6 +839,8 @@ function checkProgressAndVictory(playerId, state) {
     if (activeTeamStage) {
       if (checkTeamTutorialVictory(state.board, state.target, activeTeamStage.requireX)) {
         finishTeamTutorialPlayer(state);
+      } else if (activeTeamStage.requireX && checkVictory(state.board, state.target)) {
+        showTeamTutorialMissingXFeedback(state);
       }
       return;
     }
@@ -1303,12 +1305,12 @@ function renderTeamTutorialPlayerPanel(player) {
       <strong>${stage.title}</strong>
       <small id="tutorial-player-tip-${player.id}">${stage.requireX ? '색칠과 X표를 모두 해야 완성이에요.' : '가장 확실한 줄부터 찾아보세요.'}</small>
     </div>
+    <div id="multi-board-area-${player.id}" class="board-container tutorial-board-area"></div>
     <div class="tool-selector tutorial-tool-selector">
       <button type="button" class="tool-btn btn-pencil active" id="multi-btn-pencil-${player.id}" aria-label="${escapeHtml(player.name)} 칠하기 도구">✏️ 칠하기</button>
       <button type="button" class="tool-btn btn-x" id="multi-btn-x-${player.id}" aria-label="${escapeHtml(player.name)} X표 도구">❌ X표</button>
       <button type="button" class="tool-btn tutorial-player-hint-btn" id="tutorial-player-hint-${player.id}" aria-label="${escapeHtml(player.name)} 개인 힌트">💡 힌트</button>
     </div>
-    <div id="multi-board-area-${player.id}" class="board-container tutorial-board-area"></div>
   `;
 
   renderBoard(`multi-board-area-${player.id}`, player.id, player.board, player.target);
@@ -1433,6 +1435,28 @@ function showNextTeamTutorialHint() {
   multiPlayers.forEach(player => showNextTeamTutorialHintForPlayer(player.id, false));
   document.getElementById('tutorial-easy-tip').innerText = '👉 각자 풀고 있는 단계에 맞는 다음 힌트를 표시했어요.';
   playSound('x');
+}
+
+// 색칠은 모두 정답인데 X표가 남은 경우, 남은 빈칸을 반짝여서 짚어준다 (requireX 단계 전용)
+function showTeamTutorialMissingXFeedback(player) {
+  const area = document.getElementById(`multi-board-area-${player.id}`);
+  if (!area) return;
+
+  clearTeamTutorialPlayerHighlights(player.id);
+  let missing = 0;
+  for (let r = 0; r < player.board.length; r++) {
+    for (let c = 0; c < player.board.length; c++) {
+      if (player.target[r][c] === 0 && player.board[r][c] !== 2) {
+        missing++;
+        area.querySelector(`.nono-cell[data-r="${r}"][data-c="${c}"]`)?.classList.add('tutorial-highlight');
+      }
+    }
+  }
+
+  const tip = document.getElementById(`tutorial-player-tip-${player.id}`);
+  if (tip && missing > 0) {
+    tip.innerText = `🎨 색칠 완성! 반짝이는 빈칸 ${missing}개에 ❌를 하면 다음 단계로 가요.`;
+  }
 }
 
 function finishTeamTutorialPlayer(player) {
@@ -1705,12 +1729,12 @@ function startMultiPlay() {
         <span style="font-size:0.9rem;color:#e11d48;">❌ <span id="multi-errors-${p.id}">0</span></span>
         <span id="multi-progress-${p.id}" class="player-progress">0%</span>
       </div>
+      <div class="guide-box" id="multi-guide-box-${p.id}" style="margin-bottom: 4px; font-size: 0.85rem; padding: 6px; width: 100%; border-style: dashed; border-width: 2px; display: none; line-height: 1.3;"></div>
+      <div id="multi-board-area-${p.id}" class="board-container" style="flex-grow:1; margin-bottom: 0px;"></div>
       <div class="tool-selector" style="margin-top: 4px; margin-bottom: 4px;">
         <button type="button" class="tool-btn btn-pencil active" id="multi-btn-pencil-${p.id}">✏️ 칠하기</button>
         <button type="button" class="tool-btn btn-x" id="multi-btn-x-${p.id}">❌ X표</button>
       </div>
-      <div class="guide-box" id="multi-guide-box-${p.id}" style="margin-bottom: 4px; font-size: 0.85rem; padding: 6px; width: 100%; border-style: dashed; border-width: 2px; display: none; line-height: 1.3;"></div>
-      <div id="multi-board-area-${p.id}" class="board-container" style="flex-grow:1; margin-bottom: 0px;"></div>
       <!-- 개별 시작 오버레이 - 문제 고르기 드롭다운 추가 -->
       <div class="start-overlay" id="start-overlay-${p.id}">
         <div class="start-overlay-title">문제를 골라보세요!</div>

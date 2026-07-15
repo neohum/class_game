@@ -1632,9 +1632,10 @@ header p {
 .tutorial-panel-rule small {
   display: block;
   margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: clamp(1.74rem, 2.25vw, 2.1rem);
+  line-height: 1.25;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .tutorial-tool-selector {

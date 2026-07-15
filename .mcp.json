@@ -27,6 +27,13 @@
         "${DATABASE_URL}"
       ],
       "env": {}
+    },
+    "harness": {
+      "command": "node",
+      "args": [
+        "scripts/loop/mcp-harness.mjs"
+      ],
+      "env": {}
     }
   }
 }

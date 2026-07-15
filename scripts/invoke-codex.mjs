@@ -46,7 +46,10 @@ const prompt = [
   task,
 ].join("\n");
 
-const child = spawn("codex", ["exec", prompt], { stdio: "inherit" });
+const child = spawn("codex", ["exec", prompt], {
+  stdio: "inherit",
+  shell: process.platform === "win32",
+});
 child.on("error", (e) => {
   if (e.code === "ENOENT") {
     console.error("codex CLI not found. Install: https://github.com/openai/codex");

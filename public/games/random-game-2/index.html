@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>선택 랜덤수학 6인용 (랜덤게임2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090d16;
+    --panel: #151f32;
+    --panel-hover: #1e2d4a;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent: #38bdf8;
+    --accent-purple: #a78bfa;
+    --accent-rose: #f43f5e;
+    --success: #10b981;
+    --border: rgba(255, 255, 255, 0.06);
+    --glass: rgba(15, 23, 42, 0.6);
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Outfit', 'Inter', 'Segoe UI', 'Malgun Gothic', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 메인 레이아웃 */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* 글로벌 헤더 */
+  #main-header {
+    height: 54px;
+    flex: 0 0 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-icon {
+    font-size: 1.5rem;
+    animation: rotateDice 4s ease-in-out infinite;
+    display: inline-block;
+  }
+
+  @keyframes rotateDice {
+    0%, 100% { transform: rotate(0deg); }
+    30% { transform: rotate(-15deg); }
+    70% { transform: rotate(15deg); }
+  }
+
+  .logo-title {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .grade-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 3px;
+    border-radius: 30px;
+    border: 1px solid var(--border);
+  }
+
+  .grade-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    padding-left: 10px;
+    font-weight: 600;
+  }
+
+  .grade-chips {
+    display: flex;
+    gap: 2px;
+  }
+
+  .grade-chip {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .grade-chip.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+    color: #fff;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  }
+
+  /* 게임 패널 컨테이너 */
+  #panels {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    height: calc(100% - 54px);
+    overflow: hidden;
+  }
+
+  /* 개별 패널 */
+  .panel {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    transition: border-color 0.3s ease;
+  }
+
+  .panel.active-game {
+    border-color: rgba(56, 189, 248, 0.2);
+  }
+
+  /* 1. 선택 화면 (Select Screen) */
+  .select-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 12px;
+    overflow: hidden;
+  }
+
+  .spacer-top {
+    flex-grow: 0.5; /* 학년 선택에 따라 동적 조절 */
+    transition: flex-grow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spacer-bottom {
+    flex-grow: 0.5; /* 학년 선택에 따라 동적 조절 */
+    transition: flex-grow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .select-container {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: 85%; /* 화면 높이가 좁을 때를 대비 */
+    width: 100%;
+  }
+
+  .select-header {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .player-tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-bottom: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+
+  /* 플레이어 고유 색상 그라데이션 */
+  .p1-tag { background: linear-gradient(135deg, #38bdf8, #0369a1); color: #fff; }
+  .p2-tag { background: linear-gradient(135deg, #a78bfa, #6d28d9); color: #fff; }
+  .p3-tag { background: linear-gradient(135deg, #f43f5e, #be123c); color: #fff; }
+  .p4-tag { background: linear-gradient(135deg, #34d399, #047857); color: #fff; }
+  .p5-tag { background: linear-gradient(135deg, #fbbf24, #b45309); color: #fff; }
+  .p6-tag { background: linear-gradient(135deg, #ec4899, #be185d); color: #fff; }
+
+  .select-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  /* 게임 리스트 스크롤 영역 */
+  .game-list {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+    touch-action: pan-y; /* 세로 터치 스크롤 허용 */
+    max-height: 380px; /* 고정 또는 상대값 */
+    border-radius: 10px;
+  }
+
+  /* 스크롤바 디자인 */
+  .game-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .game-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .game-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+  .game-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* 게임 아이템 */
+  .game-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .game-item:hover {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.1);
+  }
+
+  .game-item:active {
+    transform: translateY(1px);
+  }
+
+  /* 무작위 랜덤 아이템 특별 디자인 */
+  .game-item.random-choice {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.08), rgba(244, 63, 94, 0.08));
+    border: 1px dashed rgba(167, 139, 250, 0.4);
+    animation: pulseBorder 2.5s infinite;
+  }
+
+  .game-item.random-choice:hover {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(244, 63, 94, 0.15));
+    border: 1px solid rgba(244, 63, 94, 0.6);
+    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);
+  }
+
+  @keyframes pulseBorder {
+    0%, 100% { border-color: rgba(167, 139, 250, 0.4); }
+    50% { border-color: rgba(244, 63, 94, 0.8); }
+  }
+
+  .item-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .item-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .item-icon-fallback {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--accent);
+  }
+
+  .item-icon.random-icon {
+    font-size: 1.2rem;
+    background: rgba(167, 139, 250, 0.2);
+  }
+
+  .item-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 2. 플레이 화면 (Playing Screen) */
+  .playing-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    background: var(--bg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .playing-screen.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 상단 제어 바 */
+  .playing-bar {
+    height: 44px;
+    flex: 0 0 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    background: rgba(15, 23, 42, 0.8);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .playing-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .playing-p-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .playing-game-name {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .exit-btn {
+    border: none;
+    background: linear-gradient(135deg, var(--accent-rose), rgba(244, 63, 94, 0.6));
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(244, 63, 94, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .exit-btn:hover {
+    background: linear-gradient(135deg, var(--accent-rose), #be123c);
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .exit-btn:active {
+    transform: translateY(1px);
+  }
+
+  /* iframe 영역 */
+  .iframe-container {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    background: #000;
+  }
+
+  .iframe-container iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+
+  /* 로더 스피너 */
+  .loader-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    gap: 12px;
+    transition: opacity 0.3s ease;
+  }
+
+  .loader-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(56, 189, 248, 0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .loader-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* 반응형 좁은 컬럼(모바일/세로) 대응 */
+  @media (max-width: 900px) {
+    #panels {
+      flex-wrap: wrap;
+      overflow-y: auto;
+    }
+    .panel {
+      flex: 1 1 45%;
+      height: 48%;
+      min-height: 300px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .panel {
+      flex: 1 1 100%;
+      height: 48%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 글로벌 상단 바 -->
+  <header id="main-header">
+    <div class="logo-area">
+      <span class="logo-icon">🎲</span>
+      <span class="logo-title">랜덤게임2 (수학 선택)</span>
+    </div>
+    <!-- 학년 조절기 (교실 원칙 4 대응) -->
+    <div class="grade-selector">
+      <span class="grade-label">학년 정렬</span>
+      <div class="grade-chips" id="gradeChips">
+        <button type="button" class="grade-chip" data-grade="1">1</button>
+        <button type="button" class="grade-chip" data-grade="2">2</button>
+        <button type="button" class="grade-chip active" data-grade="3">3</button>
+        <button type="button" class="grade-chip" data-grade="4">4</button>
+        <button type="button" class="grade-chip" data-grade="5">5</button>
+        <button type="button" class="grade-chip" data-grade="6">6</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 6인 플레이어 판넬 -->
+  <div id="panels"></div>
+</div>
+
+<script>
+(() => {
+  /* 1. 우클릭 및 텍스트 선택, 드래그 차단 (기본원칙 1) */
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => e.preventDefault());
+
+  /* 2. 수학 게임 목록 데이터 정의 */
+  const MATH_GAMES = [
+    { id: 'make-ten', name: '10 만들기', icon: '/games/make-ten/icon.svg' },
+    { id: 'bigger-number', name: '큰 수가 이겨!', icon: '/games/bigger-number/icon.svg' },
+    { id: 'missing-number', name: '징검다리 수', icon: '/games/missing-number/icon.svg' },
+    { id: 'compare-race', name: '길다 짧다', icon: '/games/compare-race/icon.svg' },
+    { id: 'shape-sort', name: '모양 분류', icon: '/games/shape-sort/icon.svg' },
+    { id: 'pattern-next', name: '규칙 찾기', icon: '/games/pattern-next/icon.svg' },
+    { id: 'hundred-chart', name: '100판 숨은 수', icon: '/games/hundred-chart/icon.svg' },
+    { id: 'rocket-math', name: '로켓 수학', icon: '/games/rocket-math/icon.svg' },
+    { id: 'clock-read', name: '몇 시일까요', icon: '/games/clock-read/icon.svg' },
+    { id: 'clock-practice', name: '시계 바늘을 돌려요', icon: '/games/clock-practice/icon.svg' },
+    { id: 'even-odd-run', name: '짝수 홀수 달리기', icon: '/games/even-odd-run/icon.svg' },
+    { id: 'bomb-defuse', name: '수 폭탄', icon: '/games/bomb-defuse/icon.svg' },
+    { id: 'count-down-50', name: '거꾸로 50', icon: '/games/count-down-50/icon.svg' },
+    { id: '100math', name: '100칸 수학', icon: '/games/100math/icon.svg' },
+    { id: 'number-memory', name: '숫자 기억 짝맞추기', icon: '/games/number-memory/icon.svg' }
+  ];
+
+  /* 3. 상태 관리 변수 */
+  let currentGrade = 3; // 디폴트 3학년
+  const totalPlayers = 6;
+  const panelsEl = document.getElementById('panels');
+  const panelInstances = [];
+
+  /* 4. 학년 설정에 따른 세로 배치 보간 함수 (기본원칙 4) */
+  function updateGradePositioning(grade) {
+    currentGrade = grade;
+    
+    // 학년에 따른 anchor 보간 계산
+    // grade 1 → 화면 하단(anchor = 1.0), grade 6 → 세로 중앙(anchor = 0.5)
+    const anchor = 1.0 - (grade - 1) * 0.1;
+    
+    panelInstances.forEach(p => {
+      if (p.spacerTop && p.spacerBottom) {
+        p.spacerTop.style.flexGrow = anchor;
+        p.spacerBottom.style.flexGrow = 1.0 - anchor;
+      }
+    });
+  }
+
+  /* 5. 학년 선택 헤더 제어 */
+  const gradeChips = document.getElementById('gradeChips');
+  gradeChips.addEventListener('pointerdown', e => {
+    const chip = e.target.closest('.grade-chip');
+    if (!chip) return;
+    
+    // 마우스의 경우 좌클릭만 허용
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    
+    // 기존 활성화 해제 및 신규 활성화
+    gradeChips.querySelectorAll('.grade-chip').forEach(btn => btn.classList.remove('active'));
+    chip.classList.add('active');
+    
+    const selectedGrade = parseInt(chip.dataset.grade, 10);
+    updateGradePositioning(selectedGrade);
+  });
+
+  /* 6. 개별 플레이어 패널 인스턴스 생성 */
+  function createPlayerPanel(index) {
+    const playerNum = index + 1;
+    
+    // Panel Element 생성
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+    
+    // ----------------------------------------
+    // [1] 선택 화면 (Select Screen) 구조 생성
+    // ----------------------------------------
+    const selectScreen = document.createElement('div');
+    selectScreen.className = 'select-screen';
+    
+    const spacerTop = document.createElement('div');
+    spacerTop.className = 'spacer-top';
+    
+    const spacerBottom = document.createElement('div');
+    spacerBottom.className = 'spacer-bottom';
+    
+    const selectContainer = document.createElement('div');
+    selectContainer.className = 'select-container';
+    
+    // 패널 헤더
+    const selectHeader = document.createElement('div');
+    selectHeader.className = 'select-header';
+    
+    const playerTag = document.createElement('div');
+    playerTag.className = `player-tag p${playerNum}-tag`;
+    playerTag.textContent = `PLAYER ${playerNum}`;
+    
+    const selectTitle = document.createElement('div');
+    selectTitle.className = 'select-title';
+    selectTitle.textContent = '원하는 수학 게임 선택';
+    
+    selectHeader.appendChild(playerTag);
+    selectHeader.appendChild(selectTitle);
+    
+    // 게임 리스트 스크롤 영역
+    const gameList = document.createElement('div');
+    gameList.className = 'game-list';
+    
+    // 특별 항목: 무작위 랜덤 카드 생성
+    const randomItem = document.createElement('div');
+    randomItem.className = 'game-item random-choice';
+    randomItem.innerHTML = `
+      <div class="item-icon random-icon">🎲</div>
+      <div class="item-name">무작위 랜덤 선택</div>
+    `;
+    randomItem.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      // 랜덤 게임 골라 시작하기
+      const randomIdx = Math.floor(Math.random() * MATH_GAMES.length);
+      const chosenGame = MATH_GAMES[randomIdx];
+      startGame(chosenGame.id, chosenGame.name);
+    });
+    gameList.appendChild(randomItem);
+    
+    // 개별 게임 항목 추가
+    MATH_GAMES.forEach(game => {
+      const item = document.createElement('div');
+      item.className = 'game-item';
+      
+      const iconWrap = document.createElement('div');
+      iconWrap.className = 'item-icon';
+      
+      // 이미지 에러 핸들링을 동적으로 처리하는 img 생성
+      const img = document.createElement('img');
+      img.src = game.icon;
+      img.alt = `${game.name} 아이콘`;
+      img.onerror = () => {
+        img.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'item-icon-fallback';
+        fallback.textContent = game.name.charAt(0);
+        iconWrap.appendChild(fallback);
+      };
+      iconWrap.appendChild(img);
+      
+      const name = document.createElement('div');
+      name.className = 'item-name';
+      name.textContent = game.name;
+      
+      item.appendChild(iconWrap);
+      item.appendChild(name);
+      
+      item.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
+        startGame(game.id, game.name);
+      });
+      
+      gameList.appendChild(item);
+    });
+    
+    selectContainer.appendChild(selectHeader);
+    selectContainer.appendChild(gameList);
+    
+    selectScreen.appendChild(spacerTop);
+    selectScreen.appendChild(selectContainer);
+    selectScreen.appendChild(spacerBottom);
+    panel.appendChild(selectScreen);
+    
+    // ----------------------------------------
+    // [2] 플레이 화면 (Playing Screen) 구조 생성
+    // ----------------------------------------
+    const playingScreen = document.createElement('div');
+    playingScreen.className = 'playing-screen';
+    
+    // 상단 바
+    const playingBar = document.createElement('div');
+    playingBar.className = 'playing-bar';
+    
+    const playingInfo = document.createElement('div');
+    playingInfo.className = 'playing-info';
+    
+    const playingPTag = document.createElement('span');
+    playingPTag.className = `playing-p-tag p${playerNum}-tag`;
+    playingPTag.textContent = `P${playerNum}`;
+    
+    const playingGameName = document.createElement('span');
+    playingGameName.className = 'playing-game-name';
+    
+    playingInfo.appendChild(playingPTag);
+    playingInfo.appendChild(playingGameName);
+    
+    const exitBtn = document.createElement('button');
+    exitBtn.type = 'button';
+    exitBtn.className = 'exit-btn';
+    exitBtn.innerHTML = '다른 게임 ↩';
+    exitBtn.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      stopGame();
+    });
+    
+    playingBar.appendChild(playingInfo);
+    playingBar.appendChild(exitBtn);
+    
+    // iframe & Loader
+    const iframeContainer = document.createElement('div');
+    iframeContainer.className = 'iframe-container';
+    
+    const loaderOverlay = document.createElement('div');
+    loaderOverlay.className = 'loader-overlay';
+    loaderOverlay.innerHTML = `
+      <div class="loader-spinner"></div>
+      <div class="loader-text">게임 준비 중...</div>
+    `;
+    
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('allow', '');
+    
+    // iframe 로드 완료 시 로딩 스피너 숨김 처리
+    iframe.addEventListener('load', () => {
+      loaderOverlay.style.opacity = '0';
+      setTimeout(() => {
+        loaderOverlay.style.display = 'none';
+      }, 300);
+    });
+    
+    iframeContainer.appendChild(loaderOverlay);
+    iframeContainer.appendChild(iframe);
+    
+    playingScreen.appendChild(playingBar);
+    playingScreen.appendChild(iframeContainer);
+    panel.appendChild(playingScreen);
+    
+    panelsEl.appendChild(panel);
+    
+    // 인스턴스 정보 저장
+    const instance = {
+      panelEl: panel,
+      spacerTop,
+      spacerBottom,
+      playingScreen,
+      playingGameName,
+      iframe,
+      loaderOverlay
+    };
+    panelInstances.push(instance);
+    
+    // ----------------------------------------
+    // 내부 함수 정의
+    // ----------------------------------------
+    function startGame(gameId, gameName) {
+      panel.classList.add('active-game');
+      playingGameName.textContent = gameName;
+      
+      // 로더 상태 초기화
+      loaderOverlay.style.display = 'flex';
+      loaderOverlay.style.opacity = '1';
+      
+      // 1인 플레이를 위해 URL 쿼리 파라미터 적용 (기본원칙 7)
+      iframe.src = `/games/${gameId}/index.html?players=1`;
+      
+      playingScreen.classList.add('show');
+    }
+    
+    function stopGame() {
+      panel.classList.remove('active-game');
+      playingScreen.classList.remove('show');
+      
+      // iframe 리소스 릴리즈를 위해 src를 비움
+      iframe.src = 'about:blank';
+    }
+  }
+
+  // 6개의 플레이어 패널 초기 생성
+  for (let i = 0; i < totalPlayers; i++) {
+    createPlayerPanel(i);
+  }
+
+  // 초기 학년 세로 정렬 적용
+  updateGradePositioning(currentGrade);
+})();
+</script>
+</body>
+</html>

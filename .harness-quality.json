@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "required": ["test"],
+  "conditional": [
+    {
+      "paths": ["src/ui/**", "app/**", "pages/**", "**/*.tsx"],
+      "require": ["e2e", "visual"]
+    },
+    {
+      "paths": ["bin/**", "scripts/**"],
+      "require": ["cli-smoke"]
+    }
+  ],
+  "commands": {
+    "lint": "auto",
+    "typecheck": "auto",
+    "test": "auto",
+    "e2e": "auto",
+    "visual": "auto",
+    "cli-smoke": "node scripts/route.ts \"health check\""
+  }
+}

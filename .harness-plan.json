@@ -1,0 +1,29 @@
+{
+  "_comment": [
+    "Plan-document discipline. Read by scripts/loop/plan-doc.ts; every field can be",
+    "overridden per run with HARNESS_PLAN_DIR / HARNESS_EVIDENCE_DIR /",
+    "HARNESS_PLAN_GATE / HARNESS_PLAN_WAVE_MAX.",
+    "",
+    "gate.mode  risk   (default) a card declaring Risk: medium|high needs an approved plan",
+    "           strict every card needs one",
+    "           off    none do — interactive runs only; an unattended loop refuses to honour it",
+    "evidence.requireAtRisk  the risk floor at which evidence/<date>-<card>/ must be filled",
+    "                        before a card ships. 'off' disables it. Cards compiled from a",
+    "                        plan document always carry evidence, whatever this says.",
+    "waves.maxParallel       how many cards of one dependency wave may run at once;",
+    "                        also the default worker count for `swarm.ts start`"
+  ],
+  "schema": 1,
+  "planDir": "plans",
+  "evidenceDir": "evidence",
+  "gate": {
+    "mode": "risk",
+    "ownerRequiredAtRisk": "high"
+  },
+  "evidence": {
+    "requireAtRisk": "medium"
+  },
+  "waves": {
+    "maxParallel": 3
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "_comment": "create-agent-harness provenance - harness-owned; refreshed on scaffold and --update",
+  "schema": 1,
+  "version": "0.4.31",
+  "projectName": "classgame",
+  "minNode": ">=22.18",
+  "mode": "autonomous",
+  "commit": "c1ba19767940edd389dfd67e30fb24dc95afaa01",
+  "branch": "main",
+  "remoteUrl": "https://github.com/neohum/create-agent-harness.git",
+  "stampedAt": "2026-09-20T22:36:56.109Z"
+}

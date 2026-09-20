@@ -22,7 +22,13 @@
       "Bash(git fetch*)",
       "Bash(git reset*)",
       "Bash(git submodule*)",
-      "Bash(agy --print *)"
+      "Bash(agy --print *)",
+      "Bash(node scripts/*.ts*)",
+      "Bash(node scripts/loop/*.ts*)",
+      "Bash(git worktree*)",
+      "Bash(git branch*)",
+      "Bash(git merge*)"
     ]
-  }
+  },
+  "model": "opus"
 }

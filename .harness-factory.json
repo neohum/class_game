@@ -1,0 +1,33 @@
+{
+  "enabled": true,
+  "timezone": "Asia/Seoul",
+  "schedule": "hourly",
+  "workers": 3,
+  "providerLanes": [
+    "codex",
+    "agy"
+  ],
+  "autoConfigure": true,
+  "github": {
+    "autoBootstrap": true
+  },
+  "continuity": {
+    "neverStop": true,
+    "failoverOrder": [
+      "agy",
+      "codex",
+      "claude",
+      "gemini"
+    ],
+    "modelFallbackEnv": "<PROVIDER>_FALLBACK_MODELS"
+  },
+  "marketIntervalHours": 24,
+  "deployGate": "persona-or-human",
+  "artifacts": {
+    "provider": "wasabi",
+    "prefix": "factory"
+  },
+  "notifications": {
+    "provider": "resend"
+  }
+}

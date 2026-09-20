@@ -2,5 +2,7 @@
   "antigravity.agent.toolExecutionPolicy": "always-proceed",
   "antigravity.agent.artifactReviewMode": "always-proceed",
   "antigravity.agent.fileAccessPolicy": "allow",
-  "antigravity.agent.internetAccessPolicy": "allow"
+  "antigravity.agent.internetAccessPolicy": "allow",
+  "files.encoding": "utf8",
+  "files.autoGuessEncoding": false
 }

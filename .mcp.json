@@ -19,19 +19,11 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }
     },
-    "postgres": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-postgres",
-        "${DATABASE_URL}"
-      ],
-      "env": {}
-    },
     "harness": {
       "command": "node",
       "args": [
-        "scripts/loop/mcp-harness.mjs"
+        "scripts/loop/mcp-harness.mjs",
+        "scripts/loop/mcp-harness.ts"
       ],
       "env": {}
     }

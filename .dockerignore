@@ -1,0 +1,8 @@
+# Keep the build context small — the workspace is bind-mounted at run time, so
+# the image itself needs none of the repo's contents baked in.
+.git
+.harness
+node_modules
+current_tasks
+*.log
+scripts/loop/*.sqlite*

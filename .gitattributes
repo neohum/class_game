@@ -1,0 +1,9 @@
+# Line endings normalized
+*.sh text eol=lf
+*.ps1 text eol=crlf
+* text=auto eol=lf
+
+# GitHub Linguist language statistics overrides:
+*.html linguist-documentation
+docs/**/*.html linguist-documentation
+evidence/**/*.html linguist-documentation

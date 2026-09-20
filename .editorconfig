@@ -1,0 +1,18 @@
+# UTF-8 everywhere — Korean text must never be written or read through a
+# legacy codepage (see AGENTS.md "Working language & encoding").
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.ps1]
+end_of_line = crlf
+# The one deliberate exception to the no-BOM rule. Windows PowerShell 5.1 — what
+# `powershell` resolves to, and what the loop invokes — decodes a BOM-less .ps1
+# as the ANSI codepage. The file's ✓ and — then arrive as CP1252 curly quotes,
+# which the tokenizer treats as string delimiters, and the script fails to parse
+# rather than fails to print. See AGENTS.md "Working language & encoding".
+charset = utf-8-bom

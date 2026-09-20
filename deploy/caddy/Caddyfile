@@ -1,0 +1,17 @@
+# Caddyfile — Production Performance & Security Reverse Proxy Template
+{
+	email @@ACME_EMAIL@@
+}
+
+@@DOMAIN_API@@ {
+	# HTTP 압축 (zstd 우선, gzip fallback) — 전송 용량 70~85% 절감
+	encode zstd gzip
+
+	# 정적 자산 1일 브라우저 캐싱 + 7일 stale 재검증
+	@static {
+		path /static/* /assets/* /favicon* /robots.txt
+	}
+	header @static Cache-Control "public, max-age=86400, stale-while-revalidate=604800"
+
+	reverse_proxy 127.0.0.1:@@API_PORT@@
+}

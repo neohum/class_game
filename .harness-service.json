@@ -1,0 +1,9 @@
+{
+  "type": "auto",
+  "backgroundScout": {
+    "enabled": true,
+    "intervalHours": 24,
+    "maxFindings": 3
+  },
+  "primaryJourneys": []
+}

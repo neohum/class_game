@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "updatedAt": "2026-10-03T15:48:00+09:00",
+  "description": "Curated collection of high-taste image generation prompt recipes for create-agent-harness",
+  "recipes": [
+    {
+      "id": "layered-paper-cut",
+      "name": "Layered Paper-Cut Illustration",
+      "category": "illustration",
+      "description": "Whimsical, tactile layered paper-cut illustration with soft pastel colors and subtle depth shadows.",
+      "template": "Layered paper-cut illustration of [subject], with overlapping shapes in soft pastel colors, handcrafted textures, subtle shadows between layers, clean vector edges, centered on a matte cream background, whimsical and modern visual storytelling.",
+      "placeholder": "[subject]",
+      "defaultSubject": "a creative coder orchestrating AI agents in a cozy illuminated studio",
+      "tags": ["paper-cut", "pastel", "handcrafted", "layered", "whimsical", "storytelling", "vector"],
+      "aspectRatios": ["1:1", "16:9", "4:3"],
+      "negativePrompt": "photorealistic face, messy, blurry, high contrast neon, harsh shadows, distorted geometry, ugly artifacts",
+      "examples": [
+        "Layered paper-cut illustration of an autonomous loop running seamless code verifications, with overlapping shapes in soft pastel colors, handcrafted textures, subtle shadows between layers, clean vector edges, centered on a matte cream background, whimsical and modern visual storytelling.",
+        "Layered paper-cut illustration of a team collaborating on an open source software project with paper stars and origami clouds, with overlapping shapes in soft pastel colors, handcrafted textures, subtle shadows between layers, clean vector edges, centered on a matte cream background, whimsical and modern visual storytelling."
+      ]
+    },
+    {
+      "id": "isometric-clean-vector",
+      "name": "Modern Isometric Tech Vector",
+      "category": "vector",
+      "description": "Clean architectural isometric vector illustration for developer tools, dashboards, and infra diagrams.",
+      "template": "Precision isometric vector illustration of [subject], crisp vector lines, minimal grid alignment, soft ambient occlusion, elegant muted color palette with a vibrant accent color, isolated on a neutral off-white background, Stripe-inspired modern developer aesthetic.",
+      "placeholder": "[subject]",
+      "defaultSubject": "a distributed microservice architecture with glowing data flow channels",
+      "tags": ["isometric", "tech", "vector", "architecture", "dashboard", "infra"],
+      "aspectRatios": ["16:9", "4:3", "1:1"],
+      "negativePrompt": "noisy texture, messy lines, realistic photography, dark murky background, 3D clay, distorted shapes",
+      "examples": [
+        "Precision isometric vector illustration of a multi-agent verification pipeline with automated test gates, crisp vector lines, minimal grid alignment, soft ambient occlusion, elegant muted color palette with a vibrant accent color, isolated on a neutral off-white background, Stripe-inspired modern developer aesthetic."
+      ]
+    },
+    {
+      "id": "claymorphism-3d-soft",
+      "name": "Soft Matte Claymorphism 3D",
+      "category": "3d",
+      "description": "Friendly tactile 3D claymorphic asset with smooth matte plasticine textures and diffuse studio lighting.",
+      "template": "Cute tactile 3D claymorphic model of [subject], smooth matte finish, rounded organic forms, pastel clay textures, soft studio rim lighting, gentle ambient shadows, clean minimalist composition, high-end 3D product render.",
+      "placeholder": "[subject]",
+      "defaultSubject": "a friendly companion bot holding a glowing green checkmark badge",
+      "tags": ["claymorphism", "3d", "soft", "cute", "tactile", "product", "icon"],
+      "aspectRatios": ["1:1", "4:3"],
+      "negativePrompt": "glossy metallic reflection, rough jagged edges, hyperrealistic uncanny valley, scary faces, low poly",
+      "examples": [
+        "Cute tactile 3D claymorphic model of a secure vault box with a glowing golden keyhole, smooth matte finish, rounded organic forms, pastel clay textures, soft studio rim lighting, gentle ambient shadows, clean minimalist composition, high-end 3D product render."
+      ]
+    },
+    {
+      "id": "editorial-linocut-woodblock",
+      "name": "Editorial Linocut & Woodblock Print",
+      "category": "editorial",
+      "description": "Hand-carved linocut / woodblock print with organic ink texture, two-tone ink, and artisanal printcraft feel.",
+      "template": "Artisanal hand-carved linocut print of [subject], expressive gouged lines, organic ink bleed textures, two-tone spot color on heavyweight warm fibrous paper, bold silhouette, literary magazine editorial illustration style.",
+      "placeholder": "[subject]",
+      "defaultSubject": "an owl perched atop an open antique book surrounded by celestial constellations",
+      "tags": ["linocut", "woodblock", "editorial", "printcraft", "monochrome", "ink", "literary"],
+      "aspectRatios": ["4:3", "1:1", "3:4"],
+      "negativePrompt": "smooth gradients, vector polish, digital glossy, 3d render, plastic look",
+      "examples": [
+        "Artisanal hand-carved linocut print of a compass guiding a ship through stylized ocean waves, expressive gouged lines, organic ink bleed textures, two-tone spot color on heavyweight warm fibrous paper, bold silhouette, literary magazine editorial illustration style."
+      ]
+    },
+    {
+      "id": "risograph-duotone-retro",
+      "name": "Tactile Risograph Duotone",
+      "category": "illustration",
+      "description": "Vintage risograph print with authentic halftone screen patterns, slight ink misregistration, and grainy paper.",
+      "template": "Authentic risograph print illustration of [subject], limited 2-color ink overlay (teal and warm coral), visible halftone dot patterns, subtle print misalignment, grainy riso paper texture, retro-modern graphic poster style.",
+      "placeholder": "[subject]",
+      "defaultSubject": "a retro futuristic synthesizer keyboard emitting floating sound waves",
+      "tags": ["risograph", "retro", "duotone", "halftone", "poster", "tactile", "grain"],
+      "aspectRatios": ["3:4", "1:1", "16:9"],
+      "negativePrompt": "clean flat vector, photorealistic, 3d rendered, high gloss, gradient mesh",
+      "examples": [
+        "Authentic risograph print illustration of a city skyline at dusk with towering radio antennas, limited 2-color ink overlay (teal and warm coral), visible halftone dot patterns, subtle print misalignment, grainy riso paper texture, retro-modern graphic poster style."
+      ]
+    },
+    {
+      "id": "glassmorphism-frosted-tech",
+      "name": "Frosted Glassmorphism Abstract",
+      "category": "ui-asset",
+      "description": "Translucent layered frosted glass panels with chromatic dispersion and refined luminous glow.",
+      "template": "Premium frosted glassmorphic 3D rendering of [subject], translucent acrylic glass panels with subtle chromatic aberration at the edges, soft inner refractions, floating geometric layers, gentle diffused backlight, clean dark titanium backdrop, Apple keynote aesthetics.",
+      "placeholder": "[subject]",
+      "defaultSubject": "a multi-layered security shield hovering above an encrypted data core",
+      "tags": ["glassmorphism", "frosted-glass", "translucent", "apple", "keynote", "ui-asset", "abstract"],
+      "aspectRatios": ["16:9", "1:1"],
+      "negativePrompt": "opaque plastic, flat 2d, muddy colors, harsh glare, low resolution",
+      "examples": [
+        "Premium frosted glassmorphic 3D rendering of interconnected neural network nodes with glowing fiber-optic threads, translucent acrylic glass panels with subtle chromatic aberration at the edges, soft inner refractions, floating geometric layers, gentle diffused backlight, clean dark titanium backdrop, Apple keynote aesthetics."
+      ]
+    },
+    {
+      "id": "minimalist-flat-geometric",
+      "name": "Minimalist Swiss Flat Geometric",
+      "category": "vector",
+      "description": "Bauhaus / Swiss Style minimalist flat geometric composition with disciplined negative space.",
+      "template": "Minimalist flat geometric vector artwork of [subject], disciplined grid structure, pure geometric primitives (circles, arcs, rectilinear blocks), high-contrast bold color blocking, generous negative space, International Typographic Style, iconic poster design.",
+      "placeholder": "[subject]",
+      "defaultSubject": "an abstract visual metaphor for speed, iteration, and continuous feedback",
+      "tags": ["minimalist", "swiss", "bauhaus", "geometric", "flat", "bold", "poster"],
+      "aspectRatios": ["1:1", "3:4", "16:9"],
+      "negativePrompt": "shadows, bevels, gradients, skeuomorphism, hand-drawn sketch, messy clutter",
+      "examples": [
+        "Minimalist flat geometric vector artwork of a clockwork mechanism reduced to overlapping monochrome discs and a single crimson needle, disciplined grid structure, pure geometric primitives, high-contrast bold color blocking, generous negative space, International Typographic Style, iconic poster design."
+      ]
+    },
+    {
+      "id": "watercolor-botanical-modern",
+      "name": "Modern Watercolor & Fine Line",
+      "category": "illustration",
+      "description": "Soft organic watercolor blooms with delicate ink line contouring on textured cold-press cotton paper.",
+      "template": "Modern botanical watercolor illustration of [subject], soft organic watercolor washes with natural pigment granulation, delicate thin ink line contouring, earthy muted tones with gentle sage and ochre accents, generous breathing room on white cold-press cotton paper.",
+      "placeholder": "[subject]",
+      "defaultSubject": "a calming herbal tea setup with chamomile flowers and dried lavender sprigs",
+      "tags": ["watercolor", "botanical", "organic", "fine-line", "gentle", "calm", "artisanal"],
+      "aspectRatios": ["4:3", "1:1", "3:4"],
+      "negativePrompt": "digital CGI, hard vector outlines, neon colors, plastic reflections, busy chaotic background",
+      "examples": [
+        "Modern botanical watercolor illustration of an olive branch intertwined with wild eucalyptus leaves, soft organic watercolor washes with natural pigment granulation, delicate thin ink line contouring, earthy muted tones with gentle sage and ochre accents, generous breathing room on white cold-press cotton paper."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://create-agent-harness.local/schemas/knowledge/source.schema.json",
+  "title": "SourceSpec",
+  "description": "Git-tracked source specification record for create-agent-harness knowledge library (schema_version 1).",
+  "type": "object",
+  "required": [
+    "source_id",
+    "kind",
+    "url",
+    "tags",
+    "enabled",
+    "refresh_hours",
+    "provenance",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "description": "Deterministic SHA-256 hex digest of '{kind}:{canonicalUrl}'"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "github-repo",
+        "github-stars",
+        "web"
+      ],
+      "description": "Source kind distinguishing GitHub repositories, starred subscriptions, and general web documents"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonicalized source URL (credentials and tracking parameters stripped)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable label or title for the source"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Categorization and search filter tags"
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional human notes explaining why this source was registered"
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Active flag. Disabled sources are retained in Git history but omitted from new search snapshots"
+    },
+    "refresh_hours": {
+      "type": "number",
+      "minimum": 1,
+      "description": "TTL interval in hours before checking for remote modifications"
+    },
+    "provenance": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "github-stars",
+        "bookmarks-import"
+      ],
+      "description": "Origin of the registration"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp with offset of initial registration"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp with offset of last metadata change"
+    }
+  },
+  "additionalProperties": false
+}

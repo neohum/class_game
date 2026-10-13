@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://create-agent-harness.local/schemas/knowledge/snapshot.schema.json",
+  "title": "SnapshotManifest",
+  "description": "Published snapshot manifest for create-agent-harness knowledge library (schema_version 1, format_version 1).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "format_version",
+    "catalog_id",
+    "generation",
+    "input_commit",
+    "created_at",
+    "source_summary",
+    "document_count",
+    "chunk_count",
+    "model_fingerprint",
+    "file_size_bytes",
+    "file_sha256",
+    "min_reader_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version of the manifest format"
+    },
+    "format_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Format version of the exported SQLite catalog file"
+    },
+    "catalog_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Namespace identifier for the shared catalog"
+    },
+    "generation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique immutable generation identifier for this snapshot"
+    },
+    "parent_generation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Previous generation identifier, if this was built incrementally"
+    },
+    "input_commit": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Git commit SHA of the source registry repository used to produce this snapshot"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 creation timestamp with offset"
+    },
+    "source_summary": {
+      "type": "object",
+      "required": [
+        "total",
+        "active",
+        "failed"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "active": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "description": "Summary counts of sources included, active, and failed"
+    },
+    "document_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of document revisions stored in the snapshot"
+    },
+    "chunk_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of text chunks indexed in the snapshot"
+    },
+    "model_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "description": "Deterministic SHA-256 fingerprint of the embedding model profile"
+    },
+    "sqlite_vec_version": {
+      "type": "string",
+      "description": "Exact version of sqlite-vec used to generate the vector index, if applicable"
+    },
+    "file_size_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Byte size of the exported catalog.sqlite file"
+    },
+    "file_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "description": "SHA-256 hex checksum of the exported catalog.sqlite file"
+    },
+    "min_reader_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Minimum client harness version required to read and query this snapshot"
+    }
+  },
+  "additionalProperties": false
+}

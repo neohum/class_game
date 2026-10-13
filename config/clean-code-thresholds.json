@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "minScore": 80,
+  "failOnFatal": true,
+  "weights": {
+    "complexity": 30,
+    "hygiene": 30,
+    "structuralConsistency": 20,
+    "testRatio": 20
+  },
+  "thresholds": {
+    "maxCognitiveComplexity": 15,
+    "fatalCognitiveComplexity": 25,
+    "maxNestingDepth": 4,
+    "maxFunctionSloc": 50,
+    "maxFileSloc": 400,
+    "maxEmptyCatch": 0,
+    "maxAnyCount": 0,
+    "maxAiComments": 0,
+    "minTestRatio": 0.5
+  },
+  "penalties": {
+    "emptyCatch": 25,
+    "fatalCognitiveComplexity": 15,
+    "cognitiveComplexity": 5,
+    "nestingDepth": 4,
+    "functionSloc": 3,
+    "anyLeak": 5,
+    "aiComment": 2,
+    "fileSloc": 4,
+    "lowTestRatio": 10
+  }
+}

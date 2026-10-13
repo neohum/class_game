@@ -18,17 +18,22 @@ export interface BentoCardAction {
 export interface BentoCardProps {
   title: string;
   description?: string;
+  subtitle?: string;
   badge?: string;
   icon?: string;
   colSpan?: {
     mobile?: 1;
     tablet?: 1 | 2;
     desktop?: 1 | 2 | 3 | 4;
-  };
+  } | number;
+  rowSpan?: number;
+  headerAction?: unknown;
+  footer?: unknown;
   actions?: BentoCardAction[];
   children?: unknown;
   className?: string;
   id?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -38,6 +43,11 @@ export interface BentoCardProps {
  * Desktop: lg:col-span-1, lg:col-span-2, lg:col-span-3, lg:col-span-4
  */
 export function getBentoCardClasses(colSpan?: BentoCardProps["colSpan"], customClass = ""): string {
+  if (typeof colSpan === "number") {
+    const mdClass = colSpan > 1 ? "md:col-span-2" : "md:col-span-1";
+    const lgClass = `lg:col-span-${Math.min(4, Math.max(1, colSpan))}`;
+    return `col-span-1 ${mdClass} ${lgClass} flex flex-col justify-between p-5 md:p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm transition-all duration-200 box-border w-full max-w-full overflow-hidden ${customClass}`.trim();
+  }
   const tabletSpan = colSpan?.tablet === 2 ? "md:col-span-2" : "md:col-span-1";
   const desktopSpan =
     colSpan?.desktop === 4

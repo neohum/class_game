@@ -8,18 +8,17 @@
 //   - Perfect Centering: inline-flex items-center justify-center leading-none
 
 export interface BentoGridProps {
-  cols?: 4 | 12;
-  gap?: 16 | 20 | 24;
-  padding?: 16 | 20 | 24;
+  cols?: 4 | 12 | number;
+  columns?: 4 | 12 | number;
+  gap?: 16 | 20 | 24 | number;
+  padding?: 16 | 20 | 24 | number;
   className?: string;
   id?: string;
   children?: unknown;
 }
 
-export interface BentoElement {
-  type: string;
-  props: Record<string, unknown>;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type BentoElement = any;
 
 export interface BentoLayoutCalculation {
   viewportWidth: number;
@@ -94,8 +93,8 @@ export function calculateBentoLayout(options: {
  * Compatible with React, Preact, and server-side VDOM rendering.
  */
 export function BentoGrid(props: BentoGridProps): BentoElement {
-  const { cols = 4, gap = 16, padding = 16, className = "", id, children } = props;
-  const gridClasses = getBentoGridClasses(cols, gap);
+  const { cols = props.columns ?? 4, gap = 16, padding = 16, className = "", id, children } = props;
+  const gridClasses = getBentoGridClasses((cols as 4 | 12) || 4, (gap as 16 | 20 | 24) || 16);
   const paddingClass = padding === 24 ? "p-6" : padding === 20 ? "p-5" : "p-4";
   const combinedClasses = `${gridClasses} ${paddingClass} ${className}`.trim();
 
@@ -121,8 +120,8 @@ export function BentoGrid(props: BentoGridProps): BentoElement {
  * Renders BentoGrid to pure HTML string.
  */
 export function renderBentoGridHtml(props: BentoGridProps, innerHtml = ""): string {
-  const { cols = 4, gap = 16, padding = 16, className = "", id } = props;
-  const gridClasses = getBentoGridClasses(cols, gap);
+  const { cols = props.columns ?? 4, gap = 16, padding = 16, className = "", id } = props;
+  const gridClasses = getBentoGridClasses((cols as 4 | 12) || 4, (gap as 16 | 20 | 24) || 16);
   const paddingClass = padding === 24 ? "p-6" : padding === 20 ? "p-5" : "p-4";
   const combinedClasses = `${gridClasses} ${paddingClass} ${className}`.trim();
   const idAttr = id ? ` id="${id}"` : "";

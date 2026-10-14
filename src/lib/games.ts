@@ -13,7 +13,9 @@ export async function getGames(): Promise<GameMetadata[]> {
   
   try {
     const entries = await fs.readdir(gamesDir, { withFileTypes: true });
-    const folders = entries.filter((ent) => ent.isDirectory());
+    const folders = entries.filter(
+      (ent) => ent.isDirectory() && ent.name !== 'shared' && !ent.name.startsWith('.')
+    );
     
     const games: GameMetadata[] = [];
     

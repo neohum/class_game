@@ -44,3 +44,44 @@ next-env.d.ts
 .harness/
 current.md
 current_tasks/*.lock
+
+# --- Harness Isolation for Public Repositories ---
+# When a repository is public, all agent-harness infrastructure, internal contracts,
+# and autonomous loop artifacts are excluded from Git to keep the public repo clean.
+AGENTS.md
+CLAUDE.md
+rules.md
+lat.md
+current.md
+.harness/
+.harness-*
+.claude/
+.codex/
+.agents/
+current_tasks/
+plans/
+evidence/
+evals/
+scripts/loop/
+scripts/ops/
+scripts/dev/
+scripts/release/
+scripts/knowledge/
+scripts/planner.ts
+scripts/route.ts
+scripts/test-fast.ts
+scripts/run-and-report.ts
+scripts/agent-session.ts
+scripts/convert-legal.ts
+scripts/env-sync.ts
+scripts/install-cli-hooks.ts
+scripts/harness-sync.ts
+docs/harness-*
+docs/AUTONOMOUS_LOOP.md
+docs/PLAN_DOCS.md
+docs/AUTONOMY.md
+docs/rules-*
+docs/behavior-specs.md
+docs/HARNESS.md
+docs/adr/
+Dockerfile.sandbox

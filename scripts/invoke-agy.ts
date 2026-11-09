@@ -95,9 +95,12 @@ function launch(command: string, commandArgs: string[], fallback: (() => void) |
   child.on("exit", (code) => process.exit(code ?? 0));
 }
 
-// Top model by default (AGENTS.md): agy's default is its strongest; AGY_MODEL
-// pins a specific one when the CLI supports --model.
-const agyModelArgs = process.env.AGY_MODEL ? ["--model", process.env.AGY_MODEL] : [];
+// Tiered model allocation by role: default researcher/explorer tasks to Flash
+// for fast 2M long-context synthesis without exhausting Ultra quotas.
+// Builders or explicit runs use AGY_MODEL or the flagship default.
+const defaultAgyModel = isBuilder ? null : "gemini-2.0-flash";
+const agyModel = process.env.AGY_MODEL || defaultAgyModel;
+const agyModelArgs = agyModel ? ["--model", agyModel] : [];
 launch(
   "agy",
   [...agyModelArgs, "--print", prompt],

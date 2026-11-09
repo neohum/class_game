@@ -57,10 +57,12 @@ const bin = process.platform === "win32" ? "codex.cmd" : "codex";
 // In host mode we deliberately DO NOT pass it, so codex keeps its own guard rails.
 const execArgs = ["exec"];
 if (sandboxSummary().isolated) execArgs.push("--dangerously-bypass-approvals-and-sandbox");
-// Top model by default (AGENTS.md): codex's own default is its flagship coding
-// model — force high reasoning effort by default, or medium under fast speed mode.
+// Tiered model allocation by role: for typist/builder tasks, use medium
+// reasoning effort by default (low under fast speed mode) to prevent burning
+// excessive reasoning tokens on routine edits or TDD loops. High reasoning is
+// reserved for architect/lead or explicit AGENT_REASONING_EFFORT="high".
 const speedMode = process.env.HARNESS_SPEED || "balanced";
-const defaultEffort = speedMode === "fast" ? "medium" : "high";
+const defaultEffort = speedMode === "fast" ? "low" : "medium";
 const effort = process.env.AGENT_REASONING_EFFORT || defaultEffort;
 if (process.env.CODEX_MODEL) execArgs.push("-m", process.env.CODEX_MODEL);
 execArgs.push("-c", `model_reasoning_effort="${effort}"`);

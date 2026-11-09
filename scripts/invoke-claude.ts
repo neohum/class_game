@@ -50,13 +50,15 @@ const prompt = [
 
 const forceFallback = process.env.FORCE_FALLBACK === "1" || process.env.USE_FALLBACK === "1";
 
-// Top model by default (AGENTS.md): every CLI runs its strongest model unless
-// the env overrides it. "opus" is the documented claude alias for latest Opus.
+// Tiered model allocation by role: default to Sonnet (or Haiku in fast mode)
+// for sharp independent review and design without exhausting Opus token quotas.
+// Opus is reserved for high-risk audits (FRAMEIN_RISK="high") or explicit CLAUDE_MODEL="opus".
 const speedMode = process.env.HARNESS_SPEED || "balanced";
-const defaultClaude = speedMode === "fast" ? "sonnet" : "opus";
-const defaultEffort = speedMode === "fast" ? "medium" : "high";
+const isHighRisk = process.env.FRAMEIN_RISK === "high";
+const defaultClaude = speedMode === "fast" ? "haiku" : (isHighRisk ? "opus" : "sonnet");
+const defaultEffort = speedMode === "fast" ? "low" : "medium";
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || defaultClaude;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || null; // gemini's own default is already its flagship
+const GEMINI_MODEL = process.env.GEMINI_MODEL || null;
 const CODEX_EFFORT = process.env.AGENT_REASONING_EFFORT || defaultEffort;
 const codexModelArgs = [
   ...(process.env.CODEX_MODEL ? ["-m", process.env.CODEX_MODEL] : []),
